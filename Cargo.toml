@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "crates/retrycascade-core",
+  "crates/retrycascade-cli"
+]
+resolver = "2"
