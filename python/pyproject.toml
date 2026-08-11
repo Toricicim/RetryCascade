@@ -1,0 +1,15 @@
+[project]
+name = "retrycascade"
+version = "0.1.0"
+description = "RetryCascade experiment orchestration and analysis package"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+  "pytest >=9.1,<10",
+]
