@@ -3,7 +3,10 @@ name = "retrycascade"
 version = "0.1.0"
 description = "RetryCascade experiment orchestration and analysis package"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "jsonschema>=4.25,<5",
+  "PyYAML>=6.0,<7",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

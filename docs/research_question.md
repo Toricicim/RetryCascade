@@ -21,6 +21,10 @@ Stable veya vulnerable olmak sistemin değişmez bir özelliği değildir. Bu du
 
 Trigger arızayı başlatır; fakat metastable failure'ın uzun sürmesinin temel nedeni sustaining effect'tir.
 
+## Mitigation
+
+Mitigation, başlamış geri besleme döngüsünü kırmak ve sistemi normal çalışma bölgesine döndürmek için uygulanan müdahaledir. Load shedding, retry bütçesi, throttling, kapasite artırma, restart ve sorunlu yapılandırmayı geri alma buna örnektir. RetryCascade'de retry budget ana politika kollarından biridir; source load shedding ise ayrı mitigation deneyi olarak tutulur. Böylece sistemi retry'ı sınırlamanın mı, kullanıcı işini reddetmenin mi toparladığı karıştırılmaz. Toparlanmanın bedeli gizlenmeyecek; reddedilen veya tamamlanamayan logical request'ler ayrı metrik olarak raporlanacaktır.
+
 ## Retry ile work amplification
 
 Bir logical request için gönderilen ilk deneme zamanında cevap vermediğinde yeni attempt'ler oluşturulabilir. İlk attempt sunucu tarafında hâlâ çalışıyorsa retry, aynı kullanıcı amacı için ek fiziksel çalışma üretir.
@@ -38,7 +42,7 @@ Bir logical request başına yapılan fiziksel iş miktarının bu şekilde artm
 
 ## Araştırma sorusu
 
-Farklı başlangıç yükleri ve geçici yavaşlama süreleri altında immediate retry, exponential backoff, full jitter ve retry budget/load shedding politikaları sistemin operasyonel toparlanma olasılığını, toparlanma süresini ve oluşturduğu ek iş yükünü nasıl etkiler?
+Farklı başlangıç yükleri ve geçici yavaşlama süreleri altında immediate retry, exponential backoff, full jitter ve retry budget politikaları sistemin operasyonel toparlanma olasılığını, toparlanma süresini ve oluşturduğu ek iş yükünü nasıl etkiler? Source load shedding'in recovery ve reddedilen kullanıcı işi arasındaki maliyeti ayrı mitigation deneyinde nasıl değişir?
 
 ## Hipotezler
 

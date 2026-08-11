@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrycascade.local/schemas/run-config.schema.json",
+  "title": "RetryCascade expanded run configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "analysis_eligible", "model_version", "rng_version",
+    "seed", "rho_basis_points", "policy", "trigger_duration_us"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "analysis_eligible": { "type": "boolean" },
+    "protocol_version": { "type": "string", "minLength": 1 },
+    "model_version": { "type": "string", "minLength": 1 },
+    "rng_version": { "type": "string", "minLength": 1 },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "rho_basis_points": { "type": "integer", "minimum": 1, "maximum": 9999 },
+    "policy": {
+      "enum": ["immediate", "exponential", "full_jitter", "retry_budget"]
+    },
+    "queue_capacity_waiting": { "type": "integer", "minimum": 1 },
+    "per_attempt_timeout_us": { "type": "integer", "minimum": 1 },
+    "overall_logical_deadline_us": { "type": "integer", "minimum": 1 },
+    "max_attempts_including_initial": { "type": "integer", "minimum": 1 },
+    "trigger_start_us": { "type": "integer", "minimum": 1 },
+    "trigger_duration_us": { "type": "integer", "minimum": 1 },
+    "post_trigger_horizon_us": { "type": "integer", "minimum": 1 },
+    "maximum_events": { "type": "integer", "minimum": 1 },
+    "derived_from_protocol": { "type": "boolean" },
+    "protocol_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run_config_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "analysis_eligible": { "const": true } } },
+      "then": {
+        "required": ["protocol_version", "derived_from_protocol"],
+        "properties": { "derived_from_protocol": { "const": true } }
+      }
+    },
+    {
+      "if": { "properties": { "analysis_eligible": { "const": false } } },
+      "then": {
+        "required": [
+          "queue_capacity_waiting", "per_attempt_timeout_us",
+          "overall_logical_deadline_us", "max_attempts_including_initial",
+          "trigger_start_us", "post_trigger_horizon_us", "maximum_events"
+        ]
+      }
+    }
+  ]
+}

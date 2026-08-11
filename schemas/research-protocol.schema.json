@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrycascade.local/schemas/research-protocol.schema.json",
+  "title": "RetryCascade research protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "protocol_version", "model_version", "rng_version",
+    "artifact_schema_version", "claim_scope", "parameter_provenance", "time", "scheduler", "topology",
+    "workload", "retry_contract", "policies", "trigger", "observation",
+    "baseline", "recovery", "experiment", "rng",
+    "source_load_shedding_experiment", "safety", "exclusions", "analysis", "provenance"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "protocol_version": { "type": "string", "minLength": 1 },
+    "model_version": { "type": "string", "minLength": 1 },
+    "rng_version": { "type": "string", "minLength": 1 },
+    "artifact_schema_version": { "type": "string", "minLength": 1 },
+    "claim_scope": { "$ref": "#/$defs/object" },
+    "parameter_provenance": { "$ref": "#/$defs/object" },
+    "time": { "$ref": "#/$defs/object" },
+    "scheduler": { "$ref": "#/$defs/object" },
+    "topology": { "$ref": "#/$defs/object" },
+    "workload": { "$ref": "#/$defs/object" },
+    "retry_contract": { "$ref": "#/$defs/object" },
+    "policies": { "$ref": "#/$defs/object" },
+    "trigger": { "$ref": "#/$defs/object" },
+    "observation": { "$ref": "#/$defs/object" },
+    "baseline": { "$ref": "#/$defs/object" },
+    "recovery": { "$ref": "#/$defs/object" },
+    "experiment": { "$ref": "#/$defs/object" },
+    "rng": { "$ref": "#/$defs/object" },
+    "source_load_shedding_experiment": { "$ref": "#/$defs/object" },
+    "safety": { "$ref": "#/$defs/object" },
+    "exclusions": { "$ref": "#/$defs/object" },
+    "analysis": { "$ref": "#/$defs/object" },
+    "provenance": { "$ref": "#/$defs/object" }
+  },
+  "$defs": {
+    "object": { "type": "object", "minProperties": 1 }
+  }
+}

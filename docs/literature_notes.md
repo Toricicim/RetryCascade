@@ -28,7 +28,36 @@ Bu dosya okunan kaynaklardan çıkarılan kişisel notları içerir. Bir bölüm
 **Kaynak:** Huang, L. ve diğerleri (2022). *Metastable Failures in the Wild*.  
 **Bağlantı:** https://www.usenix.org/conference/osdi22/presentation/huang-lexiang
 
-**Okuma durumu:** Okunuyor.
+**Okuma durumu:** İlk okuma tamamlandı; deney bölümlerine uygulama sırasında yeniden dönülecek.
+
+### Kapsam ve temel bulgular
+
+- Çalışma toplam **22 metastable failure olayını 11 kurumdan** inceler. Table 1 kamuya açık kaynaklardan bulunan 21 olayı içerir; Twitter'daki garbage-collection vakası içeriden incelenen ek olaydır.
+- Olay raporlarındaki trigger'ların yaklaşık `%45`i mühendislik hatalarıyla (hatalı config/kod dağıtımı veya latent bug), yaklaşık `%35`i load spike ile ilişkilendirilmiştir. Vakaların yaklaşık `%45`inde birden fazla trigger vardır.
+- İki geniş trigger ailesi tanımlanır: **organic load'u artıran load spike** ve **organic capacity'yi düşüren olay**.
+- İki geniş amplification ailesi tanımlanır: **workload amplification** ve **capacity-degradation amplification**.
+- Retry, incelenen olayların yarısından fazlasında görülen en yaygın sustaining effect'tir.
+- Bildirilen kesintiler yaklaşık `1.5–73.53 saat` aralığındadır; süresi bildirilen olaylarda `4–10 saat` aralığı en sık görülen gruptur.
+- Vulnerability ikili bir özellik değildir. Metastable duruma geçiş; başlangıçtaki vulnerability derecesiyle trigger'ın büyüklüğü ve süresinin birlikte etkisine bağlıdır.
+
+### Table 1'den çıkarılan sınıflandırma
+
+Makalede bir olayın yaşam döngüsü üç ayrı rolle incelenir:
+
+1. **Trigger:** Kötü durumu başlatan geçici olay.
+2. **Sustaining effect / amplification:** Trigger kalktıktan sonra kötü durumu sürdüren geri besleme.
+3. **Mitigation:** Geri beslemeyi kırmak ve sistemi toparlamak için uygulanan müdahale.
+
+Table 1 ve onu izleyen açıklamada retry en yaygın sustaining effect olsa da tek mekanizma değildir. Gözlenen örnekler arasında cascading overload, trafik veya iş kuyruğu büyümesi, hata yolunda aşırı loglama/pahalı işlem, lock contention, ZooKeeper veya leader-election churn, cascading server demotion, load rebalancing ve self-sustaining overload bulunur. Makalenin Twitter vakası ayrıca garbage collection'ın kapasiteyi düşüren bir amplification mekanizması olabileceğini gösterir.
+
+Bu mekanizmalar iki geniş ailede düşünülebilir:
+
+- **Workload amplification:** Retry, aşırı loglama veya yeniden dengeleme gibi davranışlarla yapılması gereken toplam iş artar.
+- **Capacity-degradation amplification:** Garbage collection, lock contention veya election churn gibi davranışlarla yararlı işleme ayrılabilen etkin kapasite azalır.
+
+Table 1'deki mitigation örnekleri arasında load shedding/throttling, retry veya başka politika değişiklikleri, kapasite artırma, restart/reboot, config rollback, hotfix, pahalı özelliği kapatma ve yükü yeniden yönlendirme bulunur. Mitigation bir sustaining effect değildir; başlamış geri beslemeyi kırmak için uygulanan düzeltici eylemdir. Her mitigation'ın kullanıcı maliyeti ayrıca değerlendirilmelidir: örneğin load shedding sistemi toparlarken bazı logical request'leri reddeder.
+
+RetryCascade MVP'si yalnız **geçici sink kapasite düşüşü + retry kaynaklı workload amplification** mekanizmasını modeller. Diğer sustaining effect'ler literatür kapsamıdır; uygulanmış özellik gibi sunulmayacaktır.
 
 ### Okurken cevaplanacak sorular
 
@@ -44,13 +73,21 @@ Bu dosya okunan kaynaklardan çıkarılan kişisel notları içerir. Bir bölüm
 
 ### Okuma sonrası kısa özet
 
-<!-- Kaynak okunduktan sonra 5–10 cümleyle doldur. -->
+Makale, farklı görünen gerçek sistem kesintilerinde ortak bir desen bulur: geçici bir trigger, yükü artıran veya kapasiteyi azaltan bir amplification mekanizmasını başlatır ve sistem trigger kalktıktan sonra da kötü durumda kalır. Kamuya açık postmortem'lerden bulunan olaylar retry'nin en yaygın sustaining effect olduğunu, fakat queue growth, expensive error handling, contention ve coordination churn gibi başka mekanizmaların da bulunduğunu gösterir. Genişletilmiş çerçeve trigger'ları load spike ve capacity decrease; amplification'ı ise workload increase ve capacity degradation olarak sınıflandırır. Recovery çoğu olayda kendiliğinden gerçekleşmemiş, load shedding veya kapasite artırma gibi güçlü müdahaleler gerekmiştir. Makale ayrıca aynı başlangıç yükünde daha uzun veya daha güçlü trigger'ın sistemi metastable bölgeye taşıyabileceğini deneysel örneklerle gösterir. Bu çalışma RetryCascade'in araştırdığı mekanizmanın gerçek sistemlerde bulunduğunu destekler; bizim üç aşamalı simülatörümüzü veya sayısal parametrelerimizi doğrulamaz.
 
 ### RetryCascade için alınacak kararlar
 
-<!-- Model veya rapor açısından çıkarılan kararları yaz. Sonuçları görmeden parametre değiştirme. -->
+- V1 yalnız `capacity-decreasing sink trigger + retry workload amplification` kombinasyonunu modeller.
+- Ana deney mutlak bir üretim kapasitesini taklit etmek yerine normalize edilmiş bottleneck capacity ve `rho` taraması kullanır.
+- `300 DB RPS + %90 cache hit + 3000 client RPS` yalnız vulnerable-state motivasyon örneğidir: `3000 * (1 - 0.90) = 300`. Kalibrasyon verisi veya varsayılan deney parametresi değildir.
+- Cache ana modele eklenmez. Gerçek bir cache modeli hit/miss, cache state/refill ve zamanla değişen hit-rate gerektirir; ayrı gelecek çalışma olacaktır.
+- `300 QPS sink / 280 QPS load / 1 s timeout / tek retry` varsa yalnız literature mechanism fixture olarak tutulur; ana deney matrisi değildir.
+- `3000 run`, `3000 request` anlamına gelmez: ana tasarımda `2400 trigger + 600 no-trigger` bağımsız simülasyon koşusudur.
+- Load shedding bir maliyetsiz başarı değildir; source-shed, abandonment ve success oranları recovery ile birlikte raporlanır.
+- Garbage collection, contention, logging ve election churn gelecek amplification eklentileridir; MVP'de uygulanmış gibi sunulmaz.
 
 ### Anlamadığım veya tekrar bakacağım noktalar
 
-<!-- Bilinmeyen noktaları silmek yerine buraya kaydet. -->
-
+- Bölüm 5'teki üç kontrollü uygulamanın parametreleri, canonical fixture yazılırken yeniden incelenecek.
+- Cache deneyindeki sınıflandırma ufku bizim `H=600 s` operasyonel recovery ufkumuzla karıştırılmayacak.
+- Kamuya açık postmortem'lerin ayrıntı düzeyi eşit değildir; yazarların gri işaretlediği vakalarda sustaining effect yorumu kesin değildir.

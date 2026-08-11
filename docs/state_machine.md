@@ -82,6 +82,8 @@ Trigger artık etkin değildir; ancak work amplification kapasiteyi tüketmeye d
 
 Geri besleme kırılır ve sistem yeniden normal çalışma bölgesine döner. Bu geçiş retry'ların sınırlandırılması, giriş yükünün ciddi biçimde azaltılması, yük atma veya kapasitenin artırılması gibi güçlü bir müdahaleyle gerçekleşebilir. Bazı koşullarda sistem dış müdahale olmadan da toparlanabilir; simülasyonda bunun süresi ölçülecektir.
 
+Bu dış veya politika-temelli düzeltici müdahaleler **mitigation** olarak adlandırılır. RetryCascade'de retry budget ve load shedding mitigation işlevi görebilir. Bir mitigation'ın sistemi toparlaması tek başına yeterli başarı ölçütü değildir; reddedilen veya yarıda bırakılan logical request maliyeti de raporlanmalıdır.
+
 ## Simülasyon koşusunun gözlem aşamaları
 
 Kavramsal sistem durumlarından ayrı olarak her deney koşusu zaman içinde şu aşamalardan geçecektir:
@@ -115,6 +117,7 @@ Recovery için kullanılacak kesin metrik eşikleri ve ne kadar süre boyunca sa
 - **Goodput:** Başarıyla tamamlanan yararlı logical request hızı.
 - **Trigger:** Sistemi geçici olarak kötü duruma iten dış olay.
 - **Sustaining effect:** Trigger bittikten sonra kötü durumu sürdüren iç geri besleme mekanizması.
+- **Mitigation:** Sustaining effect'i kırmak veya yük-kapasite dengesini yeniden kurmak için uygulanan düzeltici müdahale.
 - **Work amplification:** Bir logical request için birden fazla fiziksel attempt üretilmesi nedeniyle toplam iş miktarının artması.
 - **Operational recovery:** Trigger sonrasında önceden belirlenen performans koşullarının yeniden sağlanması.
 
