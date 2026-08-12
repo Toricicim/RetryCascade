@@ -1,0 +1,16 @@
+schema_version: "1.0.0"
+analysis_eligible: false
+model_version: "retrycascade-des-v1.0.0"
+rng_version: "keyed-chacha20-v1"
+seed: 900001
+rho_basis_points: 5000
+policy: immediate
+queue_capacity_waiting: 8
+per_attempt_timeout_us: 500000
+overall_logical_deadline_us: 2000000
+max_attempts_including_initial: 3 
+trigger_enabled: false
+trigger_start_us: 2000000
+trigger_duration_us: 0
+post_trigger_horizon_us: 3000000
+maximum_events: 100000

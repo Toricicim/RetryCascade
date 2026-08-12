@@ -28,7 +28,7 @@ Source/Ingress → Transform/Application → Sink/Database
 - Dış arrival generator, Source aşamasının dışındadır.
 - Üç aşama aynı generic `Stage` yapısını kullanır.
 - Her aşamada ayrı worker havuzu ve yalnız bekleyen işleri sayan bounded FIFO queue bulunur.
-- Nominal işleme hızları `140/120/100 work-unit/s`; bottleneck Sink'tir.
+- Nominal işleme hızları `140/120/100 work-unii/s`; bottleneck Sink'tir.
 - `rho = lambda_external / 100` olarak tanımlanır; üç aşamanın ortalaması değildir.
 - Source ve Transform headroom taşır; trigger yalnız Sink'i etkiler.
 
@@ -62,6 +62,33 @@ Cache V1 topolojisinde yoktur. Makaledeki `300 DB RPS / %90 hit / 3000 client RP
 - Trigger bittiğinde Sink nominal hıza tamamen döner ve dispatch yeniden yapılır.
 - Queue, retry ve inflight birikimi temizlenmez; post-trigger sustaining effect bu state üzerinden gözlenir.
 
+### No-trigger kontrol koşusu
+
+No-trigger kontrol koşusunda `trigger.enabled = false` olur. Sink kapasitesi koşu boyunca nominal değerinde kalır. Trigger başlangıç ve bitiş olayları oluşturulmaz.
+
+Aynı rho, policy ve seed değerlerine sahip trigger koşusuyla aynı external arrival ve service-demand örnekleri kullanılır. Böylece iki koşu arasındaki temel fark yalnızca geçici kapasite kaybıdır.
+
+Önemli fikir: iki deneyde aynı trafik var; yalnız birinde arıza var.
+
+### Post-trigger gözlem süresi
+
+Recovery horizon, trigger bittikten sonra başlar.
+
+trigger_end = trigger_start + trigger_duration
+run_end = trigger_end + post_trigger_observation_duration
+
+Örneğin trigger 300. saniyede başlayıp 10 saniye sürerse `trigger_end` 310. saniyedir. Post-trigger observation 600 saniyeyse değerlendirme 910. saniyeye kadar devam eder.
+
+Bu ayrım önemlidir; çünkü 30 saniyelik ve 1 saniyelik trigger'ların ikisine de trigger bittikten sonra eşit toparlanma süresi vermiş oluyoruz.
+
+### Kalan işin yeniden zamanlanması
+
+Trigger başladığında veya bittiğinde service içindeki iş kaybolmaz ve yeniden örneklenmez. Önce eski hız altında tamamlanan work hesaplanır. Kalan work, yeni service rate kullanılarak yeni bir completion zamanına dönüştürülür.
+
+Kesirli tick oluşursa completion süresi yukarı yuvarlanır (`ceiling`). Böylece iş gereken miktardan daha erken tamamlanmaz.
+
+Her yeniden zamanlamada attempt'in `service_epoch` değeri artırılır. Scheduler'da kalan eski completion event'i geldiğinde epoch eşleşmiyorsa state'i değiştirmeden yok sayılır ve `stale_completion_events` sayacı artırılır.
+
 ## 6. Aynı timestamp olay sırası
 
 Scheduler anahtarı `(time_tick, priority, sequence_id)` şeklindedir. Zaman `u64` microsecond tick'tir ve taşmalı aritmetik hata üretir.
@@ -69,11 +96,26 @@ Scheduler anahtarı `(time_tick, priority, sequence_id)` şeklindedir. Zaman `u6
 ```text
 1. Stage completion
 2. Attempt timeout
-3. Trigger boundary
-4. Retry ready
-5. Logical arrival
-6. Queue sample
+3. Logical deadline
+4. Trigger boundary
+5. Retry ready
+6. Logical arrival
+7. Queue observation
 ```
+
+### Source kuyruğu dolu olduğunda
+
+Bir attempt Source'a geldiğinde bütün worker'lar meşgulse ve waiting queue da doluysa attempt sisteme alınmaz.
+
+Bu attempt:
+
+- `queue_rejected(source)` olarak kaydedilir.
+- Source'a kabul edilmediği için attempt timeout'u başlatılmaz.
+- Fiziksel iş yapmadığı için servis kapasitesi tüketmez.
+- Queue rejection retryable bir sonuçtur.
+- Logical request'in deadline ve attempt hakkı uygunsa retry politikası daha sonra yeni bir attempt planlayabilir.
+
+Örnek: Source'ta 1 worker ve 2 bekleme yeri vardır. Worker çalışırken iki attempt kuyrukta bekliyorsa gelen dördüncü attempt reddedilir.
 
 - Completion ve timeout aynı tick'teyse completion kazanır. Trigger sınırındaki tamamlanmış iş önce kapanır; aynı tick'teki yeni arrival ise trigger transition sonrasındaki kapasiteyi görür.
 - Tek trigger kullanıldığı için aynı tick'te TriggerStart/TriggerEnd çakışması config validation tarafından reddedilir.
@@ -90,7 +132,21 @@ Ana dört policy:
 
 İlk üç policy aynı max-attempt, timeout, overall deadline, retryable cause ve exponential base/cap değerlerini kullanır. `full_jitter` ile `exponential` arasındaki tek fark gecikmenin randomize edilmesidir. `retry_budget`, full-jitter zamanlamasına ek olarak retry token iznini sınırlar; ilk logical arrival'ları shed etmez.
 
+### Retry budget kapsamı ve aynı-tick sırası
+
+Retry budget her logical request için ayrı değil, bir simülasyon koşusundaki bütün retry'lar tarafından paylaşılan run-global token bucket'tır. İlk attempt token tüketmez; yalnız retry oluşturulurken token gerekir. Token yoksa retry oluşturulmaz ve `retry_denied` sayacı artırılır.
+
+Yalnızca bir logical request için ilk unique ve zamanında başarı token refill'i üretir. Late veya duplicate completion refill üretmez. Token sayısı hiçbir zaman sıfırın altına veya tanımlı kapasitenin üstüne çıkamaz.
+
+Bir completion ile `RetryReady` aynı tick'e denk gelirse event önceliği nedeniyle completion önce işlenir. Completion refill hakkı kazanıyorsa token önce eklenir; ardından `RetryReady` güncel bucket durumunu görür. Böylece sonuç, event'in scheduler'a eklenme sırasına bağlı olmaz.
+
 **Source load shedding ayrı bir mitigation deneyidir; retry-budget kolunun içine gizlenmez.** Böylece recovery'nin retry sınırından mı, kullanıcı işini reddetmekten mi kaynaklandığı ayrılabilir. Source shedding çalıştırıldığında shed oranı mutlaka raporlanır.
+
+## 7.1 Analitik queue doğrulama fixture'ı
+
+Ana deneyde service demand lognormal dağılımdan gelir; bu nedenle ana model `M/M/1/K` değildir. `M/M/1/K` analitik sonuçları ana lognormal koşuları doğrulamak için kullanılmayacaktır.
+
+Simulator için ayrı bir verification fixture'ında arrival süreleri exponential, service süreleri exponential, tek server ve bounded queue kullanılacaktır. Yalnız bu özel fixture `M/M/1/K` analitik stationary ölçüleriyle karşılaştırılır. Bu kontrol, gerçek sistem geçerliliğini değil simulator'ın temel queue mekanizmasını doğru uyguladığını sınar.
 
 ## 8. Recovery ve maliyet
 
@@ -99,6 +155,40 @@ Ana dört policy:
 - Recovery, üç ardışık 30 saniyelik pencerenin tamamında goodput ve queue eşiklerinin sağlanmasıyla belirlenir.
 - `H=300/600/900 s` yalnız önceden belirlenmiş sensitivity analizidir.
 - Goodput/p95 tek başına raporlanmaz; success, source shedding, abandonment, attempts exhausted ve amplification birlikte verilir.
+
+Trigger bittiği anda 30 saniyelik parçalar hâlinde sistemi ölçeceğiz:
+
+Trigger 310. saniyede bitti.
+
+1. pencere: `[310, 340)`
+2. pencere: `[340, 370)`
+3. pencere: `[370, 400)`
+
+### Recovery pencerelerinin hizalanması
+
+Recovery pencereleri `trigger_end` anında başlar ve birbiriyle çakışmaz.
+
+Bir completion tam pencerenin bitiş anında gerçekleşirse biten pencereye değil, sonraki pencereye dahil edilir. Pencereler `[start, end)` biçimindedir.
+
+Recovery için arka arkaya üç pencerenin de tanımlanan goodput ve queue koşullarını sağlaması gerekir.
+
+### Queue recovery metriği
+
+Her 30 saniyelik recovery penceresinde Source, Transform ve Sink waiting queue uzunlukları toplanır. Worker içinde çalışan işler bu queue değerine dahil edilmez.
+
+Ortalama, belirli aralıklarla alınan sample'ların basit ortalamasıyla değil, queue değerinin her seviyede ne kadar süre kaldığı kullanılarak hesaplanır:
+
+```text
+time_weighted_mean_queue = sum(queue_value × duration) / window_duration
+```
+
+Örneğin queue 10 saniye boyunca 0, sonraki 10 saniye boyunca 9 ve son 10 saniye boyunca tekrar 0 ise:
+
+```text
+(0 × 10 + 9 × 10 + 0 × 10) / 30 = 3
+```
+
+`queue_sample_interval_us = 100000` ile alınan 100 ms sample'lar yalnızca debug ve görselleştirme içindir. Bu interval değiştirildiğinde bilimsel recovery sonucu değişmemelidir.
 
 ## 9. Determinizm ve veri üretimi
 

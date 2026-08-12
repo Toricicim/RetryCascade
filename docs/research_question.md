@@ -46,13 +46,15 @@ Farklı başlangıç yükleri ve geçici yavaşlama süreleri altında immediate
 
 ## Hipotezler
 
-### H1 — Başlangıç yükü ve toparlanma
+### H1 — Retry budget ve toparlanma sınırı
 
-Başlangıç yükü arttıkça immediate retry politikasının 600 saniyelik gözlem süresi içinde toparlanamama olasılığı artacaktır.
+Trigger süreleri üzerinden ortalama alındığında retry budget politikasının yüzde 50 toparlanma sınırı `rho_50`, immediate retry politikasından en az `0.05` daha yüksek olacaktır.
 
 ### H2 — Retry senkronizasyonu
 
-Full jitter, aynı koşullardaki deterministic exponential backoff politikasına kıyasla retry'ların eş zamanlı yığılmasını ve tepe attempt yükünü azaltacaktır.
+Full jitter, aynı koşullardaki deterministic exponential backoff politikasına kıyasla bir saniyelik pencerelerde peak retry amplification'ı en az yüzde 10 azaltacaktır.
+
+Bu belgedeki H1 ve H2, `configs/research_protocol.yaml` içindeki `analysis.h1` ve `analysis.h2` alanlarının insan tarafından okunabilir karşılığıdır. Birincil hipotezler için YAML protokolü sürümlü ve makine-okunur otoritedir; metinler onunla çelişemez.
 
 ## Projenin iddia etmeyeceği şeyler
 

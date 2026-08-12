@@ -8,6 +8,7 @@ from retrycascade.protocol import (
     canonical_sha256,
     load_and_validate,
     validate_protocol_semantics,
+    validate_run_config_semantics,
 )
 
 
@@ -20,12 +21,18 @@ RUN_SCHEMA = ROOT / "schemas" / "run-config.schema.json"
 def test_research_protocol_is_valid_and_hash_is_stable() -> None:
     protocol = load_and_validate(PROTOCOL, PROTOCOL_SCHEMA, kind="protocol")
     digest = canonical_sha256(protocol)
-    expected = (ROOT / "configs" / "research_protocol.sha256").read_text(encoding="utf-8").strip()
+    expected = (
+        (ROOT / "configs" / "research_protocol.sha256")
+        .read_text(encoding="utf-8")
+        .strip()
+    )
     assert digest == canonical_sha256(deepcopy(protocol))
     assert digest == expected
 
 
-@pytest.mark.parametrize("name", ["smoke.yaml", "canonical_metastable.yaml"])
+@pytest.mark.parametrize(
+    "name", ["smoke.yaml", "canonical_metastable.yaml", "no_trigger_control.yaml"]
+)
 def test_run_examples_are_valid(name: str) -> None:
     load_and_validate(ROOT / "configs" / name, RUN_SCHEMA, kind="run")
 
@@ -65,3 +72,81 @@ def test_float_is_forbidden_in_canonical_domain() -> None:
     protocol["trigger"]["capacity_multiplier_basis_points"] = 0.5
     with pytest.raises(ProtocolError, match="Floating-point"):
         validate_protocol_semantics(protocol)
+
+
+def test_negative_stage_capacity_is_rejected():
+    # geçerli protokolü yükle
+    protocol = load_and_validate(
+        PROTOCOL,
+        PROTOCOL_SCHEMA,
+        kind="protocol",
+    )
+    # soruce kapasitesini bilerek boz
+    protocol["topology"]["stages"][0]["nominal_rate_work_units_per_second"] = -1
+
+    # Validator'un hatasını vekle
+    with pytest.raises(ProtocolError, match="bottleneck"):
+        validate_protocol_semantics(protocol)
+
+
+@pytest.mark.parametrize("invalid_timeout", [0, -1])
+def test_non_positive_timeout_is_rejected(invalid_timeout):
+    protocol = load_and_validate(
+        PROTOCOL,
+        PROTOCOL_SCHEMA,
+        kind="protocol",
+    )
+    protocol["retry_contract"]["per_attempt_timeout_us"] = invalid_timeout
+
+    with pytest.raises(ProtocolError, match="timeout"):
+        validate_protocol_semantics(protocol)
+
+
+def test_unknown_policy_is_rejected():
+    protocol = load_and_validate(
+        PROTOCOL,
+        PROTOCOL_SCHEMA,
+        kind="protocol",
+    )
+
+    protocol["policies"]["enabled"][0] = "unknown_policy"
+
+    with pytest.raises(ProtocolError, match="polic"):
+        validate_protocol_semantics(protocol)
+
+
+def test_invalid_trigger_start_is_rejected():
+    protocol = load_and_validate(
+        PROTOCOL,
+        PROTOCOL_SCHEMA,
+        kind="protocol",
+    )
+
+    protocol["trigger"]["start_us"] = protocol["observation"]["baseline_end_us"] - 1
+
+    with pytest.raises(ProtocolError, match="ordering"):
+        validate_protocol_semantics(protocol)
+
+
+@pytest.mark.parametrize(
+    ("trigger_enabled", "trigger_duration_us"),
+    [
+        (True, 0),
+        (False, 1_000_000),
+    ],
+)
+def test_trigger_enabled_and_duration_must_agree(
+    trigger_enabled: bool,
+    trigger_duration_us: int,
+) -> None:
+    config = load_and_validate(
+        ROOT / "configs" / "smoke.yaml",
+        RUN_SCHEMA,
+        kind="run",
+    )
+
+    config["trigger_enabled"] = trigger_enabled
+    config["trigger_duration_us"] = trigger_duration_us
+
+    with pytest.raises(ProtocolError, match="trigger"):
+        validate_run_config_semantics(config)

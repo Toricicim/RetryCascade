@@ -4,6 +4,27 @@
 
 Kodlamaya başlamadan önce simülasyonun bütün davranışlarını ve deney parametrelerini kesinleştirmek. Sonuçlar görüldükten sonra yapılan her semantik değişiklik yeni `model_version` ve `protocol_hash` gerektirecek.
 
+## Durum
+
+`TAMAMLANDI — SEMANTİK VE PROTOKOL KİLİTLENDİ`. Tam resolved-run schema ve golden fixture, karar çalışması değil implementasyon olduğu için Gün 3'ün ilk işi olarak devredildi; Rust simülasyon kodu bu teslim tamamlanmadan başlamayacak.
+
+## Gün 3 öncesi zorunlu semantik açıklar
+
+- [x] `LogicalDeadline` olayını, başlangıcını ve scheduler priority’sini tanımla.
+- [x] Aynı tick sırasını kilitle: completion → attempt timeout → logical deadline → trigger → retry ready → arrival → queue observation.
+- [x] `RetryReady == LogicalDeadline` durumunda deadline’ın kazanacağını yaz ve test senaryosunu tanımla.
+- [x] Source queue doluysa attempt’in `queue_rejected(source)` olacağını; Source admission olmadığı için timeout başlamayacağını yaz.
+- [x] `attempts_exhausted`, `deadline_abandoned`, late ve duplicate muhasebesini tek anlamlı state tablosuna bağla.
+- [x] No-trigger koşulunu explicit `trigger.enabled: false` ile temsil et.
+- [x] Horizon’ları trigger bitişine göre süre olarak tanımla: `run_end = trigger_end + post_trigger_duration`.
+- [x] Recovery pencerelerini `trigger_end` anına hizala ve pencere sınırındaki completion kuralını yaz.
+- [x] Queue recovery metriğini tanımla: 30 saniyelik exact time-weighted mean waiting occupancy; 100 ms sample yalnız debug/görselleştirme.
+- [x] Service completion süresinde integer ceiling yuvarlamasını ve stale epoch event sayacını tanımla.
+- [x] Retry budget’ın run-global olduğunu ve completion/refill’in aynı tick RetryReady’den önce işlendiğini yaz.
+- [x] H1/H2 için tek authoritative metni protokol ile `research_question.md` arasında eşleştir.
+- [x] Lognormal ana model için `M/M/1/K` iddiasını kaldır; analitik test yapılacaksa ayrı exponential-service fixture tanımla.
+- [ ] Python’ın üreteceği tam `resolved_run_config.json` şemasını ve golden örneğini tamamla. **Gün 3'ün ilk geliştirme işi olarak devredildi.**
+
 ## Tamamlananlar
 
 - [x] OSDI 2022 ilk okumasının notlarını tamamla.
@@ -42,23 +63,23 @@ Kodlamaya başlamadan önce simülasyonun bütün davranışlarını ve deney pa
 ### 2. Config şemasını oluştur
 
 - [x] `schemas/run-config.schema.json` dosyasını oluştur.
-- [ ] Zorunlu alanları tanımla.
-- [ ] Kapasite, queue, timeout ve sürelerin pozitif olmasını zorunlu kıl.
-- [ ] `rho` değerlerini `0 < rho < 1` aralığıyla sınırla.
-- [ ] Trigger multiplier değerini `0 < multiplier <= 1` aralığıyla sınırla.
+- [x] Zorunlu alanları tanımla.
+- [x] Kapasite, queue, timeout ve sürelerin pozitif olmasını zorunlu kıl.
+- [x] `rho` değerlerini `0 < rho < 1` aralığıyla sınırla.
+- [x] Trigger multiplier değerini `0 < multiplier <= 1` aralığıyla sınırla.
 - [x] Policy adlarını enum ile sınırla.
 - [ ] Bilinmeyen alanları veya eksik sürüm bilgisini reddet.
-- [ ] `trigger_start < trigger_end` ve horizon ilişkileri için uygulama-seviyesi validation notu ekle.
+- [x] `trigger_start < trigger_end` ve horizon ilişkileri için uygulama-seviyesi validation notu ekle.
 
 ### 3. Geçerli ve geçersiz örnekler hazırla
 
 - [x] `configs/smoke.yaml` dosyasını küçük ve hızlı çalışan geçerli config olarak doldur.
 - [x] En az bir geçerli canonical config hazırla.
-- [ ] Negatif kapasite örneğinin reddedildiğini test et.
-- [ ] Sıfır/negatif timeout örneğinin reddedildiğini test et.
-- [ ] `rho >= 1` örneğinin reddedildiğini test et.
-- [ ] Bilinmeyen policy örneğinin reddedildiğini test et.
-- [ ] Çakışan veya geçersiz trigger zamanı örneğinin reddedildiğini test et.
+- [x] Negatif kapasite örneğinin reddedildiğini test et.
+- [x] Sıfır/negatif timeout örneğinin reddedildiğini test et.
+- [x] `rho >= 1` örneğinin reddedildiğini test et.
+- [x] Bilinmeyen policy örneğinin reddedildiğini test et.
+- [x] Çakışan veya geçersiz trigger zamanı örneğinin reddedildiğini test et.
 
 ### 4. Canonical protocol hash
 
@@ -79,15 +100,19 @@ Kodlamaya başlamadan önce simülasyonun bütün davranışlarını ve deney pa
 
 ## Gün 2 kabul kriterleri
 
-- [ ] `configs/research_protocol.yaml` geçerli şema kontrolünden geçiyor.
+- [x] `configs/research_protocol.yaml` geçerli şema kontrolünden geçiyor.
 - [ ] Geçersiz config örnekleri beklenen nedenle reddediliyor.
-- [ ] Aynı canonical config aynı SHA-256 değerini üretiyor.
-- [ ] “Bu olay gerçekleşirse simülatör ne yapar?” sorusunda muğlak state transition kalmadı.
-- [ ] Ana sonuç görülmeden önce protokol ve model sürümü kaydedildi.
+- [x] Aynı canonical config aynı SHA-256 değerini üretiyor.
+- [x] “Bu olay gerçekleşirse simülatör ne yapar?” sorusunda muğlak state transition kalmadı.
+- [x] Ana sonuç görülmeden önce protokol ve model sürümü kaydedildi.
 
-## Kill gate
+## Kapanış kapısı
 
-Semantik çelişki, belirsiz timeout/duplicate davranışı veya doğrulanamayan config kalırsa Gün 3 Rust model koduna geçilmez.
+Semantik çelişki, belirsiz timeout/duplicate davranışı veya doğrulanamayan config kalmadı. Gün 3 başlayabilir; ancak tam resolved-run schema ve golden fixture tamamlanmadan Rust simülasyon modeline geçilmez.
+
+## Gün sonunda anlatabilmeliyim
+
+> Python neden protokolü çözüp hash üretiyor, Rust neden yalnız tam çözülmüş tek-run JSON config okuyor?
 
 ## Başvuru belgeleri
 

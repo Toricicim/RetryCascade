@@ -5,6 +5,7 @@ rng_version: "keyed-chacha20-v1"
 seed: 900001
 rho_basis_points: 5000
 policy: immediate
+trigger_enabled: true
 queue_capacity_waiting: 8
 per_attempt_timeout_us: 500000
 overall_logical_deadline_us: 2000000

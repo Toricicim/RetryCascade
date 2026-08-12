@@ -107,9 +107,83 @@ stateDiagram-v2
 
 Recovery için kullanılacak kesin metrik eşikleri ve ne kadar süre boyunca sağlanmaları gerektiği, Gün 2'de `research_protocol.yaml` içinde sonuçlar görülmeden önce dondurulacaktır.
 
+## Aynı tick içindeki olay önceliği
+
+Birden fazla olay aynı simülasyon anında gerçekleşirse aşağıdaki sıra kullanılır:
+
+1. `StageCompletion`
+2. `AttemptTimeout`
+3. `LogicalDeadline`
+4. `TriggerBoundary`
+5. `RetryReady`
+6. `LogicalArrival`
+7. `QueueObservation`
+
+Bu sıralama sayesinde bir attempt tam timeout anında tamamlanırsa completion önce işlenir. `RetryReady` ile `LogicalDeadline` aynı tick'e denk gelirse deadline önce işlenir; logical request terminal duruma geçtiği için yeni attempt oluşturulmaz. Son eşitlik bozucu monoton `sequence_id` değeridir.
+
+### Deadline ile retry aynı anda gerçekleşirse
+
+Örnek:
+
+- Logical request `t = 0` anında gelir.
+- Overall deadline süresi 2 saniyedir.
+- Bir retry `t = 2 saniye` anında hazır hâle gelir.
+- Aynı anda gerçekleşen `LogicalDeadline` önce işlenir.
+- Logical request `DeadlineAbandoned` durumuna geçer.
+- Ardından `RetryReady` işlenir; ancak istek artık terminal durumda olduğu için yeni attempt oluşturulmaz.
+
+Beklenen sonuç: Toplam attempt sayısı artmaz.
+
+## Logical request ve attempt sonuç muhasebesi
+
+Bir logical request kullanıcının istediği tek yararlı işi, attempt ise bu işi tamamlamak için yapılan her fiziksel denemeyi temsil eder. Bu nedenle kullanıcının sonucu ile sunucunun yaptığı fiziksel işler ayrı kaydedilir.
+
+### Logical request durumları
+
+| Durum | Ne zaman oluşur? | Yeni retry olabilir mi? | Goodput üretir mi? |
+|---|---|---:|---:|
+| `Pending` | İstek geldi; henüz terminal bir sonuç yok. | Koşullar uygunsa evet | Hayır |
+| `Succeeded` | Bir attempt kendi timeout'undan ve logical deadline'dan önce ilk başarılı cevabı verdi. | Hayır | Bir kez |
+| `AttemptsExhausted` | Bütün attempt hakları kullanıldı ve artık zamanında başarı üretebilecek aktif attempt kalmadı. | Hayır | Hayır |
+| `DeadlineAbandoned` | Overall logical deadline doldu ve daha önce başarı oluşmadı. | Hayır | Hayır |
+| `OutstandingAtHorizon` | Simülasyon gözlem ufku bittiğinde istek hâlâ terminal durumda değildi. | Simülasyon sona erdi | Hayır |
+
+`AttemptsExhausted`, son attempt yalnızca oluşturulduğu anda verilmez. Son attempt hâlâ timeout olmadan çalışıyorsa zamanında başarı ihtimali vardır ve logical request `Pending` kalır. Son kullanılabilir attempt timeout olduğunda veya reddedildiğinde ve başka zamanında sonuç verebilecek attempt kalmadığında `AttemptsExhausted` oluşur. Logical deadline daha önce gelirse sonuç bunun yerine `DeadlineAbandoned` olur.
+
+### Attempt'in istemci açısından sonucu
+
+Her attempt aşağıdaki istemci sonuçlarından yalnızca birine girer:
+
+| Sonuç | Anlamı | Goodput |
+|---|---|---:|
+| `OnTimeWinner` | İlk zamanında cevap veren attempt'tir. | Bir logical request için 1 |
+| `TimedOut` | Kendi timeout'u dolmuştur; fiziksel iş V1'de devam edebilir. | 0 |
+| `QueueRejected(stage)` | Belirtilen stage'e kabul edilmemiştir. | 0 |
+| `CancelledBeforeStart` | Logical request terminal olduğu için henüz başlamamış retry no-op olmuştur. | 0 |
+| `InflightAtHorizon` | Gözlem bittiğinde queue veya service içindedir. | 0 |
+
+### Sunucu tamamlanma etiketleri
+
+İstemci sonucu ile fiziksel sunucu işi aynı şey değildir. Bu nedenle completion olduğunda aşağıdaki etiketler ayrıca tutulur ve bir attempt birden fazlasını taşıyabilir:
+
+| Etiket | Anlamı |
+|---|---|
+| `late_completion` | Attempt kendi timeout'undan sonra fiziksel olarak tamamlandı. |
+| `duplicate_completion` | Logical request daha önce başka bir attempt ile başarıya ulaştıktan sonra tamamlandı. |
+| `wasted_work` | Completion kullanıcı goodput'una katkı sağlamadı. Late veya duplicate completion bu kapsamdadır. |
+
+Örnek: Attempt 1 timeout olduktan sonra Attempt 2 zamanında başarı sağlayabilir. Attempt 1 daha sonra tamamlarsa hem `late_completion` hem `duplicate_completion` hem de `wasted_work` etiketi alır. Logical request'in tek sonucu ise `Succeeded` olarak kalır.
+
 ## Temel kavramlar
 
 - **Logical request:** Kullanıcının veya dış sistemin gerçekleştirmek istediği tek yararlı iş.
+Overall deadline, logical request'in sisteme dışarıdan geldiği anda başlar.
+Deadline zamanı arrival_time + overall_deadline olarak hesaplanır.
+Deadline geldiğinde istek henüz başarılı olmadıysa DeadlineAbandoned durumuna geçer.
+Bundan sonra bu logical request için yeni retry oluşturulmaz.
+Kuyrukta bekleyen veya service alan eski attempt'ler iptal edilmez.
+Bu attempt'ler daha sonra tamamlansa bile goodput üretmez; late/wasted work olarak kaydedilir.
+
 - **Attempt:** Bir logical request'i tamamlamak için sisteme gönderilen her fiziksel deneme.
 - **Retry:** Önceki attempt başarısız olduğunda veya zamanında cevap vermediğinde oluşturulan yeni attempt.
 - **Timeout:** Bir attempt için izin verilen bekleme süresinin dolması.
