@@ -8,7 +8,7 @@ Bu klasör ilk on günün uygulanabilir planıdır. Ana bilimsel sözleşmenin k
 |---|---|---|
 | 01 | Problem, literatür ve iskelet | Tamamlandı |
 | 02 | Semantik ve araştırma protokolü | Tamamlandı; resolved schema Gün 3'e devredildi |
-| 03 | Rust tipleri ve resolved config | Bekliyor |
+| 03 | Rust tipleri ve resolved config | Devam ediyor — Python/JSON hazır, Rust tipleri bekliyor |
 | 04 | Deterministik scheduler ve asgari RNG | Bekliyor |
 | 05 | Retry’siz pipeline | Bekliyor |
 | 06 | Bounded queue ve Sink trigger | Bekliyor |

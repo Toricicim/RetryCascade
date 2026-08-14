@@ -23,7 +23,7 @@ Kodlamaya başlamadan önce simülasyonun bütün davranışlarını ve deney pa
 - [x] Retry budget’ın run-global olduğunu ve completion/refill’in aynı tick RetryReady’den önce işlendiğini yaz.
 - [x] H1/H2 için tek authoritative metni protokol ile `research_question.md` arasında eşleştir.
 - [x] Lognormal ana model için `M/M/1/K` iddiasını kaldır; analitik test yapılacaksa ayrı exponential-service fixture tanımla.
-- [ ] Python’ın üreteceği tam `resolved_run_config.json` şemasını ve golden örneğini tamamla. **Gün 3'ün ilk geliştirme işi olarak devredildi.**
+- [x] Python’ın üreteceği tam `resolved_run_config.json` şemasını ve golden örneğini tamamla. **Gün 3'te tamamlandı.**
 
 ## Tamamlananlar
 

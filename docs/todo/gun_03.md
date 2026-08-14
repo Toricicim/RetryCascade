@@ -1,12 +1,29 @@
 # Gün 3 TODO — Rust Tipleri ve Resolved Config
 
+## Durum
+
+`DEVAM EDİYOR — PYTHON → JSON GEÇİŞİ TAMAM`. Sıradaki iş Rust config tipleri.
+
 ## Amaç
 
 Python'ın ürettiği tamamen çözülmüş tek-koşu JSON dosyasını Rust'ta güvenli biçimde okumak. Rust araştırma YAML'ını birleştirmeyecek ve hash üretmeyecek.
 
 ## Önkoşul
 
-Gün 2 hard gate tamamen kapanmış olmalı.
+Gün 2 semantik ve araştırma protokolü tamamlandı.
+
+## Python resolved-config ön hazırlığı
+
+- [x] `research_protocol.yaml` ile tek koşu seçimini birleştiren `resolve_run_config` iskeletini oluştur.
+- [x] Üç stage, workload, request semantiği ve retry sözleşmesini resolved çıktıya taşı.
+- [x] Trigger başlangıç/bitiş, post-trigger duration ve `run_end_us` değerlerini çöz.
+- [x] Seçilen policy için yalnız gerekli policy parametrelerini üret.
+- [x] Observation, recovery, RNG ve event safety alanlarını resolved çıktıya taşı.
+- [x] Dört policy'nin doğru ve yalnız kendine ait parametrelerle çözüldüğünü test et.
+- [x] Resolver testlerini geçir: `9 passed`; Python test paketinin tamamı `28 passed`.
+- [x] `protocol_sha256` ve `run_config_sha256` değerlerini resolved çıktıya ekle.
+- [x] Tam resolved-run JSON Schema'yı oluştur ve resolved sözlüğü bu şemayla doğrula.
+- [x] Deterministik golden `resolved_run_config.json` dosyasını üret ve hash testini ekle.
 
 ## Must
 
@@ -37,7 +54,7 @@ Strict resolved JSON okuyup doğrulayan küçük Rust config katmanı.
 
 ## Stop gate
 
-Rust'ın kullandığı herhangi bir bilimsel parametre resolved JSON içinde görünmüyorsa Gün 4'e geçme.
+Python resolved config şemadan geçmeden ve golden JSON üretilmeden Rust struct'larına başlama. Rust'ın kullandığı herhangi bir bilimsel parametre resolved JSON içinde görünmüyorsa Gün 4'e geçme.
 
 ## Gün sonunda anlatabilmeliyim
 
