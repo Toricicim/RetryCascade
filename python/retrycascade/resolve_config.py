@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -61,11 +62,18 @@ def resolve_run_config(
 ) -> dict[str, Any]:
     """Combine the research protocol and one factor selection."""
 
-    trigger_start_us = protocol["trigger"]["start_us"]
+    analysis_eligible = selection["analysis_eligible"]
+    trigger_start_us = (
+        protocol["trigger"]["start_us"]
+        if analysis_eligible
+        else selection["trigger_start_us"]
+    )
     trigger_duration_us = selection["trigger_duration_us"]
-    post_trigger_duration_us = protocol["observation"][
-        "post_trigger_artifact_horizon_us"
-    ]
+    post_trigger_duration_us = (
+        protocol["observation"]["post_trigger_artifact_horizon_us"]
+        if analysis_eligible
+        else selection["post_trigger_horizon_us"]
+    )
     trigger_end_us = _checked_add_us(
         trigger_start_us,
         trigger_duration_us,
@@ -80,9 +88,44 @@ def resolve_run_config(
     policy_name = selection["policy"]
     policy_config = _resolve_policy(protocol, policy_name)
 
+    stages = deepcopy(protocol["topology"]["stages"])
+    retry_contract = deepcopy(protocol["retry_contract"])
+    recovery = deepcopy(protocol["recovery"])
+
+    if not analysis_eligible:
+        for stage in stages:
+            stage["queue_capacity_waiting"] = selection["queue_capacity_waiting"]
+        retry_contract["per_attempt_timeout_us"] = selection[
+            "per_attempt_timeout_us"
+        ]
+        retry_contract["overall_logical_deadline_us"] = selection[
+            "overall_logical_deadline_us"
+        ]
+        retry_contract["max_attempts_including_initial"] = selection[
+            "max_attempts_including_initial"
+        ]
+        recovery["window_us"] = selection["recovery_window_us"]
+
+    observation = (
+        {
+            "arrivals_begin_us": protocol["observation"]["arrivals_begin_us"],
+            "warmup_end_us": protocol["observation"]["warmup_end_us"],
+            "baseline_start_us": protocol["observation"]["baseline_start_us"],
+            "baseline_end_us": protocol["observation"]["baseline_end_us"],
+        }
+        if analysis_eligible
+        else {
+            "arrivals_begin_us": 0,
+            "warmup_end_us": selection["warmup_end_us"],
+            "baseline_start_us": selection["baseline_start_us"],
+            "baseline_end_us": trigger_start_us,
+        }
+    )
+
     resolved = {
         "rng": protocol["rng"],
         "schema_version": selection["schema_version"],
+        "analysis_eligible": analysis_eligible,
         "protocol_version": protocol["protocol_version"],
         "model_version": protocol["model_version"],
         "rng_version": protocol["rng_version"],
@@ -99,8 +142,8 @@ def resolve_run_config(
         "policy": policy_config,
         "trigger_enabled": selection["trigger_enabled"],
         "trigger_duration_us": selection["trigger_duration_us"],
-        "stages": protocol["topology"]["stages"],
-        "retry_contract": protocol["retry_contract"],
+        "stages": stages,
+        "retry_contract": retry_contract,
         "trigger_start_us": trigger_start_us,
         "trigger_end_us": trigger_end_us,
         "trigger_capacity_multiplier_basis_points": protocol["trigger"][
@@ -108,14 +151,13 @@ def resolve_run_config(
         ],
         "post_trigger_duration_us": post_trigger_duration_us,
         "run_end_us": run_end_us,
-        "observation": {
-            "arrivals_begin_us": protocol["observation"]["arrivals_begin_us"],
-            "warmup_end_us": protocol["observation"]["warmup_end_us"],
-            "baseline_start_us": protocol["observation"]["baseline_start_us"],
-            "baseline_end_us": protocol["observation"]["baseline_end_us"],
-        },
-        "recovery": protocol["recovery"],
-        "maximum_events": protocol["safety"]["maximum_events_per_run"],
+        "observation": observation,
+        "recovery": recovery,
+        "maximum_events": (
+            protocol["safety"]["maximum_events_per_run"]
+            if analysis_eligible
+            else selection["maximum_events"]
+        ),
     }
 
     resolved["protocol_sha256"] = canonical_sha256(protocol)

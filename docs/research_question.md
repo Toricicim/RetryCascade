@@ -42,19 +42,33 @@ Bir logical request başına yapılan fiziksel iş miktarının bu şekilde artm
 
 ## Araştırma sorusu
 
-Farklı başlangıç yükleri ve geçici yavaşlama süreleri altında immediate retry, exponential backoff, full jitter ve retry budget politikaları sistemin operasyonel toparlanma olasılığını, toparlanma süresini ve oluşturduğu ek iş yükünü nasıl etkiler? Source load shedding'in recovery ve reddedilen kullanıcı işi arasındaki maliyeti ayrı mitigation deneyinde nasıl değişir?
+Full-jitter zamanlaması aynı tutulduğunda run-global retry budget'ın operasyonel toparlanmaya ek etkisi, başlangıç yükü ve geçici Sink kapasite kaybının süresiyle nasıl değişir? Bu etki; zamanında tamamlanan benzersiz logical request oranı, deadline abandonment ve fiziksel work amplification maliyetleriyle birlikte nasıl değerlendirilmelidir?
+
+Immediate retry, deterministic exponential backoff, full jitter ve retry budget kollarının tamamı uygulanmış politika paketleri olarak ayrıca karşılaştırılacaktır. Ancak bu paket karşılaştırması, tek başına jitter veya budget mekanizmasının nedensel etkisi diye yorumlanmayacaktır.
 
 ## Hipotezler
 
-### H1 — Retry budget ve toparlanma sınırı
+### Birincil H1 — Aynı jitter altında retry budget etkisi
 
-Trigger süreleri üzerinden ortalama alındığında retry budget politikasının yüzde 50 toparlanma sınırı `rho_50`, immediate retry politikasından en az `0.05` daha yüksek olacaktır.
+Önceden tanımlanan yüksek-stres hücrelerinde (`rho ∈ {0.80, 0.90, 0.95}` ve trigger süresi `10 s` veya `30 s`), aynı full-jitter zamanlaması altında retry budget açıkken 600 saniye içinde operasyonel toparlanma olasılığı, budget kapalı full-jitter kolundan daha yüksek olacaktır.
 
-### H2 — Retry senkronizasyonu
+Bu hipotezin sıfır ve alternatif biçimi şöyledir:
 
-Full jitter, aynı koşullardaki deterministic exponential backoff politikasına kıyasla bir saniyelik pencerelerde peak retry amplification'ı en az yüzde 10 azaltacaktır.
+- **H0:** `retry_budget − full_jitter` toparlanma olasılığı farkı sıfırdan büyük değildir.
+- **H1:** `retry_budget − full_jitter` toparlanma olasılığı farkı sıfırdan büyüktür.
 
-Bu belgedeki H1 ve H2, `configs/research_protocol.yaml` içindeki `analysis.h1` ve `analysis.h2` alanlarının insan tarafından okunabilir karşılığıdır. Birincil hipotezler için YAML protokolü sürümlü ve makine-okunur otoritedir; metinler onunla çelişemez.
+Bu karşılaştırmada iki kolun jitter algoritması ve backoff parametreleri aynıdır; değişen mekanizma token budget'tır. Sonuç her `rho × trigger süresi` hücresinde ayrıca gösterilecektir. Yüksek-stres hücreleri için eşit ağırlıklı özet verilebilir, ancak bu özet ters yönlü hücresel etkileri gizlemek için kullanılmayacaktır.
+
+Toparlanma kazanımı tek başına "daha iyi politika" anlamına gelmez. Aynı hücrelerde zamanında benzersiz başarı oranı, deadline abandonment ve attempts-per-logical-request birlikte raporlanacaktır. Budget daha çok recovery sağlarken kullanıcı başarısını düşürürse sonuç üstünlük değil, trade-off olarak adlandırılacaktır.
+
+### İkincil araştırma soruları
+
+- Politika etkisi başlangıç yükü ve trigger süresine göre yön veya büyüklük değiştiriyor mu? Koşula bağlı sıralama ve crossover sonuçları, belirsizlikleriyle birlikte betimleyici olarak raporlanacaktır; crossover varmış gibi önceden varsayılmayacaktır.
+- Yalnız kuyruk durumuna bakan recovery tanımı ile goodput ve kuyruğu birlikte kullanan ana recovery tanımı hangi koşullarda farklı sınıflandırma yapıyor? Bu bir ölçüm duyarlılığı analizidir; gerçek sistem için dış ground truth olmadan "queue-only yanlıştır" denmeyecektir.
+- Süreye özel `rho_50` değerleri ikincil boundary özetidir. Gözlenen gridin dışında extrapolation yapılmayacak ve crossing yoksa sonuç censored/not estimable olarak raporlanacaktır.
+- Deterministic exponential ile standart full-jitter karşılaştırması yalnız uygulanan iki politika paketinin karşılaştırmasıdır. Mean-matched kontrol eklenmeden saf jitter/senkronizasyon nedenselliği iddia edilmeyecektir.
+
+Bu belgedeki birincil H1, `configs/research_protocol.yaml` içindeki `analysis.h1` alanının insan tarafından okunabilir karşılığıdır. Birincil hipotez için YAML protokolü sürümlü ve makine-okunur otoritedir; metinler onunla çelişemez. Pilot tohumları birincil analize alınmayacak; ana deney başlamadan önce final grid, seed sayısı, belirsizlik yöntemi ve censoring kuralları ayrıca dondurulacaktır.
 
 ## Projenin iddia etmeyeceği şeyler
 
@@ -63,6 +77,7 @@ Bu belgedeki H1 ve H2, `configs/research_protocol.yaml` içindeki `analysis.h1` 
 - Modelin PostgreSQL veya başka bir veritabanı motorunun gerçek performansını temsil ettiği iddia edilmeyecektir.
 - Literatürde bilinmeyen yeni bir failure türünün keşfedildiği söylenmeyecektir.
 - Sonuçlar, deneyde incelenmeyen yük, trigger ve sistem koşullarına genellenmeyecektir.
+- Simülasyon sonuçları tek başına güçlü sistemler konferansı düzeyinde dış geçerlilik veya üretim sistemi rehberi olarak sunulmayacaktır.
 
 ## Temel kaynak
 

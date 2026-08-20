@@ -10,12 +10,12 @@ Strict `ResolvedRunConfig` testleri geçmeli.
 
 ## Must
 
-- [ ] `EventKind`, `Event` ve monoton `sequence_id` tiplerini yaz.
-- [ ] `BinaryHeap` üzerinde en erken olayı önce çıkaran total ordering kur.
-- [ ] Aynı tick priority sırasını sözleşmeye göre uygula.
-- [ ] Olay zamanı eklemelerinde checked arithmetic kullan.
-- [ ] Keyed RNG için seed/namespace API'sinin küçük iskeletini kur.
-- [ ] Aynı seed'in aynı olay/RNG çıktısını verdiğini doğrula.
+- [x] `EventKind`, payload'ları, `Event` ve monoton `sequence_id` tiplerini yaz.
+- [x] `BinaryHeap` üzerinde en erken olayı önce çıkaran total ordering kur.
+- [x] Aynı tick priority sırasını sözleşmeye göre uygula.
+- [x] Olay zamanı eklemelerinde checked arithmetic kullan.
+- [x] Keyed RNG için seed/namespace API'sinin küçük iskeletini kur.
+- [x] Aynı seed'in aynı olay/RNG çıktısını verdiğini doğrula.
 
 ## Stretch
 
@@ -28,11 +28,11 @@ State değiştirmeyen, deterministik olay kuyruğu ve küçük RNG sözleşmesi.
 
 ## Kabul testleri
 
-- [ ] Yedi olay türü ters sırada eklenince doğru priority ile çıkar.
-- [ ] Aynı priority'de `sequence_id` sırasını korur.
-- [ ] Completion aynı tick'teki timeout'tan önce gelir.
-- [ ] Zaman taşması hata üretir; boş scheduler güvenli davranır.
-- [ ] Aynı seed iki çalıştırmada aynı golden sonucu verir.
+- [x] Yedi olay türü ters sırada eklenince doğru priority ile çıkar.
+- [x] Aynı priority'de `sequence_id` sırasını korur.
+- [x] Completion aynı tick'teki timeout'tan önce gelir.
+- [x] Zaman ve sequence taşması hata üretir; boş scheduler güvenli davranır.
+- [x] Aynı seed iki çalıştırmada aynı golden sonucu verir.
 
 ## Stop gate
 

@@ -2,14 +2,20 @@
 
 Bu klasör ilk on günün uygulanabilir planıdır. Ana bilimsel sözleşmenin kaynağı TODO dosyaları değil; `configs/research_protocol.yaml`, `docs/system_architecture.md` ve bilimsel protokoldür.
 
+Araştırma yönü ve aktif kapsam birbirinden ayrılmıştır:
+
+- [Ana araştırma sorusu ve hipotez](../research_question.md)
+- [Koşullu güçlü-yayın araştırma programı](../research_program.md) — aktif Gün 1–10 backlog'u değildir
+- [Karar günlüğü](../decision_log.md)
+
 ## Durum
 
 | Gün | Konu | Durum |
 |---|---|---|
 | 01 | Problem, literatür ve iskelet | Tamamlandı |
 | 02 | Semantik ve araştırma protokolü | Tamamlandı; resolved schema Gün 3'e devredildi |
-| 03 | Rust tipleri ve resolved config | Devam ediyor — Python/JSON hazır, Rust tipleri bekliyor |
-| 04 | Deterministik scheduler ve asgari RNG | Bekliyor |
+| 03 | Rust tipleri ve resolved config | Tamamlandı |
+| 04 | Deterministik scheduler ve asgari RNG | Tamamlandı |
 | 05 | Retry’siz pipeline | Bekliyor |
 | 06 | Bounded queue ve Sink trigger | Bekliyor |
 | 07 | Timeout, deadline ve lifecycle ledger | Bekliyor |

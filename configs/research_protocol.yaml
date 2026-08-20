@@ -1,5 +1,5 @@
 schema_version: "1.0.0"
-protocol_version: "retrycascade-protocol-v1.0.0"
+protocol_version: "retrycascade-protocol-v1.1.0"
 model_version: "retrycascade-des-v1.0.0"
 rng_version: "keyed-chacha20-v1"
 artifact_schema_version: "1.0.0"
@@ -32,10 +32,11 @@ scheduler:
   priorities:
     stage_completion: 1
     attempt_timeout: 2
-    trigger_boundary: 3
-    retry_ready: 4
-    logical_arrival: 5
-    queue_sample: 6
+    logical_deadline: 3
+    trigger_boundary: 4
+    retry_ready: 5
+    logical_arrival: 6
+    queue_sample: 7
 
 topology:
   type: serial_pipeline
@@ -214,8 +215,8 @@ exclusions:
 
 analysis:
   alpha_familywise_basis_points: 500
-  primary_hypotheses: [H1, H2]
-  multiplicity_adjustment: holm
+  primary_hypotheses: [H1]
+  multiplicity_adjustment: not_required_for_single_primary_hypothesis
   cell_recovery_interval: wilson_95
   rho50_method: monotone_isotonic_interpolation
   extrapolate_rho50_outside_observed_range: false
@@ -225,14 +226,36 @@ analysis:
     confidence_level_basis_points: 9500
     rng_seed: 424242
   h1:
-    comparison: retry_budget_minus_immediate
-    estimand: mean_across_trigger_durations_delta_rho50
-    minimum_practical_effect_basis_points: 500
-  h2:
-    comparison: full_jitter_over_exponential
-    metric: peak_retry_amplification_1s
-    aggregation: geometric_mean_of_paired_ratios
-    minimum_practical_reduction_basis_points: 1000
+    comparison: retry_budget_minus_full_jitter
+    mechanism_held_constant: full_jitter_schedule_and_backoff_parameters
+    high_stress_rho_basis_points: [8000, 9000, 9500]
+    high_stress_trigger_durations_us: [10000000, 30000000]
+    effectiveness_estimand: paired_difference_in_recovered_by_primary_horizon
+    confirmatory_summary: equal_weight_mean_over_preregistered_high_stress_cells
+    alternative: greater_than_zero
+    primary_user_cost_estimand: paired_difference_in_unique_on_time_success_ratio
+    additional_cost_metrics:
+      [deadline_abandonment_rate, attempts_per_logical_request, retry_denied_rate]
+    always_report_cell_specific_effects: true
+    recovery_gain_alone_does_not_imply_policy_dominance: true
+  secondary_questions:
+    policy_condition_interaction:
+      status: descriptive_with_uncertainty
+      factors: [rho_basis_points, trigger_duration_us]
+      crossover_not_assumed: true
+    recovery_definition_sensitivity:
+      status: exploratory
+      comparison: queue_only_vs_joint_goodput_and_queue
+      no_real_world_ground_truth_claim: true
+    rho50:
+      status: duration_specific_secondary_boundary_summary
+      extrapolation_forbidden: true
+      report_censored_when_crossing_absent: true
+    standard_policy_package_comparison:
+      status: descriptive
+      policies: [immediate, exponential, full_jitter, retry_budget]
+    pure_jitter_causal_claim:
+      status: dropped_until_mean_matched_control_exists
 
 provenance:
   require_protocol_sha256: true

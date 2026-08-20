@@ -20,6 +20,7 @@ SELECTION_PATH = ROOT / "configs" / "canonical_metastable.yaml"
 RUN_SCHEMA = ROOT / "schemas" / "run-config.schema.json"
 RESOLVED_SCHEMA_PATH = ROOT / "schemas" / "resolved-run-config.schema.json"
 GOLDEN_PATH = ROOT / "tests" / "golden" / "resolved_run_config.json"
+SMOKE_GOLDEN_PATH = ROOT / "tests" / "golden" / "resolved_smoke_config.json"
 
 
 def load_resolved_schema() -> dict:
@@ -42,6 +43,7 @@ def test_resolver_combines_protocol_and_selection() -> None:
     validate_resolved_run_config(resolved, load_resolved_schema())
 
     assert resolved["protocol_version"] == protocol["protocol_version"]
+    assert resolved["analysis_eligible"] is True
     assert resolved["seed"] == selection["seed"]
     assert resolved["rho_basis_points"] == 9000
     assert resolved["policy"] == {
@@ -109,6 +111,34 @@ def test_resolver_combines_protocol_and_selection() -> None:
 
     resolved_again = resolve_run_config(protocol, selection)
     assert resolved_again == resolved
+
+
+def test_smoke_selection_overrides_runtime_sized_fields() -> None:
+    protocol = load_and_validate(PROTOCOL_PATH, PROTOCOL_SCHEMA, kind="protocol")
+    selection = load_and_validate(
+        ROOT / "configs" / "smoke.yaml",
+        RUN_SCHEMA,
+        kind="run",
+    )
+
+    resolved = resolve_run_config(protocol, selection)
+    validate_resolved_run_config(resolved, load_resolved_schema())
+
+    assert resolved["analysis_eligible"] is False
+    assert resolved["trigger_start_us"] == 2_000_000
+    assert resolved["trigger_end_us"] == 3_000_000
+    assert resolved["post_trigger_duration_us"] == 3_000_000
+    assert resolved["run_end_us"] == 6_000_000
+    assert resolved["maximum_events"] == 100_000
+    assert resolved["recovery"]["window_us"] == 1_000_000
+    assert resolved["observation"] == {
+        "arrivals_begin_us": 0,
+        "warmup_end_us": 1_000_000,
+        "baseline_start_us": 1_000_000,
+        "baseline_end_us": 2_000_000,
+    }
+    assert all(stage["queue_capacity_waiting"] == 8 for stage in resolved["stages"])
+    assert resolved == json.loads(SMOKE_GOLDEN_PATH.read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize(

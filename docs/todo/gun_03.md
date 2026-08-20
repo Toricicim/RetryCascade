@@ -2,7 +2,7 @@
 
 ## Durum
 
-`DEVAM EDİYOR — PYTHON → JSON GEÇİŞİ TAMAM`. Sıradaki iş Rust config tipleri.
+`TAMAMLANDI`. Python'ın ürettiği resolved JSON artık Rust tarafından strict biçimde okunuyor ve semantik olarak doğrulanıyor.
 
 ## Amaç
 
@@ -27,13 +27,13 @@ Gün 2 semantik ve araştırma protokolü tamamlandı.
 
 ## Must
 
-- [ ] `Tick`, `LogicalRequestId`, `AttemptId` ve `StageId` newtype'larını yaz.
-- [ ] `ResolvedRunConfig` ve iç tiplerini `serde` ile tanımla.
-- [ ] Bilinmeyen ve eksik alanları reddet.
-- [ ] `thiserror` ile anlaşılır config/validation hataları oluştur.
-- [ ] Pozitif kapasite, süre, timeout/deadline ve üç stage invariant'larını doğrula.
-- [ ] Zaman toplama/çevirme işlemlerinde checked arithmetic kullan.
-- [ ] Python'ın verdiği protocol/run hash ve sürümleri çıktıya aynen taşı.
+- [x] `Tick`, `LogicalRequestId`, `AttemptId` ve `StageId` newtype'larını yaz.
+- [x] `ResolvedRunConfig` ve iç tiplerini `serde` ile tanımla.
+- [x] Bilinmeyen ve eksik alanları reddet.
+- [x] `thiserror` ile anlaşılır config/validation hataları oluştur.
+- [x] Pozitif kapasite, süre, timeout/deadline ve üç stage invariant'larını doğrula.
+- [x] Zaman toplama/çevirme işlemlerinde checked arithmetic kullan.
+- [x] Python'ın verdiği protocol/run hash ve sürümleri çıktıya aynen taşı.
 
 ## Stretch
 
@@ -46,11 +46,11 @@ Strict resolved JSON okuyup doğrulayan küçük Rust config katmanı.
 
 ## Kabul testleri
 
-- [ ] Geçerli smoke fixture parse edilir.
-- [ ] Eksik sürüm veya bilinmeyen alan reddedilir.
-- [ ] Sıfır kapasite ve `timeout >= deadline` reddedilir.
-- [ ] Taşma oluşturacak zaman değeri kontrollü hata verir.
-- [ ] `cargo fmt --check`, `cargo clippy --workspace -- -D warnings` ve `cargo test --workspace` geçer.
+- [x] Geçerli golden resolved fixture parse edilir. Henüz tam resolved smoke fixture üretilmediği için smoke testi Gün 10'a bırakıldı.
+- [x] Eksik sürüm veya bilinmeyen alan reddedilir.
+- [x] Sıfır kapasite ve `timeout >= deadline` reddedilir.
+- [x] Taşma oluşturacak zaman değeri kontrollü hata verir.
+- [x] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` ve `cargo test --workspace --locked` geçer.
 
 ## Stop gate
 

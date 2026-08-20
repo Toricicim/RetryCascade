@@ -83,6 +83,18 @@
       "type": "integer",
       "minimum": 1
     },
+    "warmup_end_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "baseline_start_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recovery_window_us": {
+      "type": "integer",
+      "minimum": 1
+    },
     "maximum_events": {
       "type": "integer",
       "minimum": 1
@@ -136,6 +148,9 @@
           "max_attempts_including_initial",
           "trigger_start_us",
           "post_trigger_horizon_us",
+          "warmup_end_us",
+          "baseline_start_us",
+          "recovery_window_us",
           "maximum_events"
         ]
       }

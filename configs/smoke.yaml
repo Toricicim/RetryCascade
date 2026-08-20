@@ -13,4 +13,7 @@ max_attempts_including_initial: 3
 trigger_start_us: 2000000
 trigger_duration_us: 1000000
 post_trigger_horizon_us: 3000000
+warmup_end_us: 1000000
+baseline_start_us: 1000000
+recovery_window_us: 1000000
 maximum_events: 100000

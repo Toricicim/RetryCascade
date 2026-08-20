@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "protocol_version", "model_version", "rng_version",
+    "schema_version", "analysis_eligible", "protocol_version", "model_version", "rng_version",
     "protocol_sha256", "run_config_sha256", "seed", "rho_basis_points",
     "arrival_process", "service_demand", "request_semantics", "policy",
     "stages", "retry_contract", "trigger_enabled", "trigger_start_us",
@@ -15,6 +15,7 @@
   ],
   "properties": {
     "schema_version": { "const": "1.0.0" },
+    "analysis_eligible": { "type": "boolean" },
     "protocol_version": { "type": "string", "minLength": 1 },
     "model_version": { "type": "string", "minLength": 1 },
     "rng_version": { "type": "string", "minLength": 1 },
