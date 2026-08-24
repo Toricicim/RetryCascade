@@ -28,12 +28,21 @@ pub enum AdmissionOutcome {
     Rejected(StageJob),
 }
 
+/// Bir worker'daki iş tamamlandığında stage'in yaptığı iki değişikliği birlikte döndürür.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompletionOutcome {
+    pub completed: StageJob,
+    pub started_next: Option<StageJob>,
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum StageError {
     #[error("worker capacity must be positive")]
     ZeroWorkerCapacity,
     #[error("waiting queue capacity must be positive")]
     ZeroWaitingCapacity,
+    #[error("attempt {attempt_id:?} is not currently in service")]
+    AttemptNotInService { attempt_id: AttemptId },
 }
 
 /// Bir pipeline aşamasının çalışan işlerini ve FIFO bekleme kuyruğunu tutar.
@@ -82,6 +91,30 @@ impl Stage {
         AdmissionOutcome::Rejected(job)
     }
 
+    /// Çalışan attempt'i tamamlar ve varsa FIFO kuyruğunun başındaki işi başlatır.
+    pub fn complete(&mut self, attempt_id: AttemptId) -> Result<CompletionOutcome, StageError> {
+        let completed_position = self
+            .in_service
+            .iter()
+            .position(|job| job.attempt_id == attempt_id)
+            .ok_or(StageError::AttemptNotInService { attempt_id })?;
+
+        let completed = self.in_service.remove(completed_position);
+        let started_next = self.waiting.pop_front();
+
+        if let Some(job) = started_next {
+            self.in_service.push(job);
+        }
+
+        debug_assert!(self.in_service.len() <= self.worker_capacity);
+        debug_assert!(self.waiting.len() <= self.queue_capacity_waiting);
+
+        Ok(CompletionOutcome {
+            completed,
+            started_next,
+        })
+    }
+
     pub const fn id(&self) -> StageId {
         self.id
     }
@@ -105,7 +138,7 @@ impl Stage {
 
 #[cfg(test)]
 mod tests {
-    use super::{AdmissionOutcome, Stage, StageJob};
+    use super::{AdmissionOutcome, CompletionOutcome, Stage, StageError, StageJob};
     use crate::types::{AttemptId, StageId};
 
     #[test]
@@ -116,5 +149,88 @@ mod tests {
         assert_eq!(stage.admit(job), AdmissionOutcome::Started(job));
         assert_eq!(stage.in_service_len(), 1);
         assert_eq!(stage.waiting_len(), 0);
+    }
+
+    #[test]
+    fn jobs_wait_and_are_rejected_when_worker_and_queue_are_full() {
+        let mut stage = Stage::new(StageId(0), 1, 2).unwrap();
+        let first = StageJob::new(AttemptId(1), 1_000);
+        let second = StageJob::new(AttemptId(2), 1_000);
+        let third = StageJob::new(AttemptId(3), 1_000);
+        let fourth = StageJob::new(AttemptId(4), 1_000);
+
+        assert_eq!(stage.admit(first), AdmissionOutcome::Started(first));
+        assert_eq!(stage.admit(second), AdmissionOutcome::Queued(second));
+        assert_eq!(stage.admit(third), AdmissionOutcome::Queued(third));
+        assert_eq!(stage.admit(fourth), AdmissionOutcome::Rejected(fourth));
+        assert_eq!(stage.in_service_len(), 1);
+        assert_eq!(stage.waiting_len(), 2);
+    }
+
+    #[test]
+    fn completion_promotes_waiting_jobs_in_fifo_order() {
+        let mut stage = Stage::new(StageId(0), 1, 2).unwrap();
+        let first = StageJob::new(AttemptId(1), 1_000);
+        let second = StageJob::new(AttemptId(2), 1_000);
+        let third = StageJob::new(AttemptId(3), 1_000);
+
+        stage.admit(first);
+        stage.admit(second);
+        stage.admit(third);
+
+        assert_eq!(
+            stage.complete(first.attempt_id),
+            Ok(CompletionOutcome {
+                completed: first,
+                started_next: Some(second),
+            })
+        );
+        assert_eq!(stage.in_service_len(), 1);
+        assert_eq!(stage.waiting_len(), 1);
+
+        assert_eq!(
+            stage.complete(second.attempt_id),
+            Ok(CompletionOutcome {
+                completed: second,
+                started_next: Some(third),
+            })
+        );
+        assert_eq!(stage.in_service_len(), 1);
+        assert_eq!(stage.waiting_len(), 0);
+    }
+
+    #[test]
+    fn completion_without_a_waiting_job_leaves_worker_idle() {
+        let mut stage = Stage::new(StageId(0), 1, 2).unwrap();
+        let job = StageJob::new(AttemptId(1), 1_000);
+        stage.admit(job);
+
+        assert_eq!(
+            stage.complete(job.attempt_id),
+            Ok(CompletionOutcome {
+                completed: job,
+                started_next: None,
+            })
+        );
+        assert_eq!(stage.in_service_len(), 0);
+        assert_eq!(stage.waiting_len(), 0);
+    }
+
+    #[test]
+    fn completing_an_unknown_attempt_is_an_error_and_preserves_state() {
+        let mut stage = Stage::new(StageId(0), 1, 2).unwrap();
+        let running = StageJob::new(AttemptId(1), 1_000);
+        let waiting = StageJob::new(AttemptId(2), 1_000);
+        stage.admit(running);
+        stage.admit(waiting);
+
+        assert_eq!(
+            stage.complete(AttemptId(99)),
+            Err(StageError::AttemptNotInService {
+                attempt_id: AttemptId(99),
+            })
+        );
+        assert_eq!(stage.in_service_len(), 1);
+        assert_eq!(stage.waiting_len(), 1);
     }
 }

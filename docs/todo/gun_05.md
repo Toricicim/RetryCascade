@@ -10,9 +10,9 @@ Scheduler sıralama ve tekrar üretilebilirlik testleri geçmeli.
 
 ## Must
 
-- [ ] Önce tek stage ile worker + FIFO waiting queue mantığını kur.
+- [x] Önce tek stage ile worker + FIFO waiting queue mantığını kur.
 - [ ] Sonra aynı generic `Stage` tipini üç aşamaya genişlet.
-- [ ] Waiting queue ile in-service iş sayısını ayrı tut.
+- [x] Waiting queue ile in-service iş sayısını ayrı tut.
 - [ ] Sabit service-demand fixture ile ilk dikey akışı çalıştır.
 - [ ] Stage completion sonrasında sıradaki stage'e admission yap.
 - [ ] Temel arrivals/completions/occupancy sayaçlarını ekle.
@@ -29,7 +29,7 @@ Retry'siz ve trigger'sız çalışan generic üç-aşamalı pipeline.
 ## Kabul testleri
 
 - [ ] Tek request'in üç completion zamanı elle yapılan hesapla aynıdır.
-- [ ] Üç request FIFO sırasını korur.
+- [x] Üç request FIFO sırasını korur.
 - [ ] Waiting occupancy `0..queue_capacity`, çalışan sayısı `0..workers` aralığındadır.
 - [ ] Aynı fixture aynı summary/checksum'u verir.
 
