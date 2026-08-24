@@ -91,3 +91,45 @@ Makale, farklı görünen gerçek sistem kesintilerinde ortak bir desen bulur: g
 - Bölüm 5'teki üç kontrollü uygulamanın parametreleri, canonical fixture yazılırken yeniden incelenecek.
 - Cache deneyindeki sınıflandırma ufku bizim `H=600 s` operasyonel recovery ufkumuzla karıştırılmayacak.
 - Kamuya açık postmortem'lerin ayrıntı düzeyi eşit değildir; yazarların gri işaretlediği vakalarda sustaining effect yorumu kesin değildir.
+
+## 3. Altı yakın çalışma sonrası toplu karşılaştırma — 2026-08-24
+
+Bu tablo tam sistematik literatür taraması değildir. Amacı, RetryCascade'in daha önce yapılmış geniş iddiaları yeniden yenilik gibi sunmasını önlemektir.
+
+| Çalışma | Ana yöntem ve doğrulama | İşgal ettiği alan | RetryCascade için açık kalan dar soru |
+|---|---|---|---|
+| Huang vd., *Metastable Failures in the Wild*, OSDI 2022 | 11 kurumdan 22 olay; trigger/amplification sınıflandırması; üç kontrollü reproduction | Retry'nin yaygın sustaining effect olması; vulnerability × trigger şiddeti × süre | Tek başına policy tournament veya "retry metastability yaratır" iddiası yeni değildir. |
+| Habibi vd., *MSF-Model*, SRDS 2024 | Timeout-retrial orbit queue ve distance divergence; PostgreSQL/Paxos prototipiyle boundary doğrulaması | Queue modeliyle metastability boundary tahmini ve gerçek prototip karşılaştırması | Yeni model iddiası yalnız aynı sınırı başka simülatörde çizmek olamaz. |
+| Isaacs vd., *Analyzing Metastable Failures*, HotOS 2025 | CTMC → DES → emulator → stress-test toolchain | Çok katmanlı analiz/kalibrasyon yaklaşımı ve safe-region/recovery analizi | Emulator'da trigger sonrası retry oranının DES'ten yaklaşık `%20` yüksek kalmasının lifecycle nedenleri açık bir model-mismatch sorusudur. |
+| Isaacs vd., *Formal Analysis of Metastable Failures in Software Systems*, 2025 | DSL, DES semantics ve DES verisiyle kalibre edilen CTMC; recovery/mitigation analizi | Queue, timeout ve retry parametre bölgeleri; recovery zamanı; throttling/autoscaling tahmini | Generic DES, recovery map veya CTMC calibration tek başına yeni değildir. |
+| *RetryGuard*, 2025/2026 | AWS ve Istio testbedleri; backoff, jitter, retry budget/token-bucket ve adaptif kontrol karşılaştırması | Genel policy comparison ve rejection/latency tabanlı online retry controller | RetryCascade genel "hangi policy en iyi" veya yeni eşik controller'ı iddiası yapmamalıdır. |
+| Farahbakhsh vd., *Characterizing Metastable Faults and Failures*, 2026 | Destabilizing component cycles, scheduling ve Nyx DSL; üç case study | Metastability'nin overload dışındaki yapısal/nedensel karakterizasyonu | Generic feedback-cycle veya scheduling'in önemli olduğu iddiası işgal edilmiştir. |
+
+### Toplu hüküm
+
+- V1'in aynı full-jitter altında budget etkisi, temiz bir staj araştırması ve tekrarlanabilir benchmark olarak kalır.
+- Logical/attempt/cohort ayrımı doğru bilimsel muhasebe ve ucuz falsification sağlar; tek başına güçlü akademik yenilik değildir.
+- Gerçek ölçüm olmadan belirsizlik taraması `certificate` veya production policy recommendation olarak adlandırılmaz.
+- Queue/orbit sayılarının age/deadline geçmişini kaybetmesi ilginç tanısal sorudur; bağımsız ana rota olarak geniş teori ve doğrulama gerektirir.
+- Seçilen akademik boşluk, gerçek testbedde timeout sonrası işin kısmi/gecikmeli cancellation davranışını ölçmek ve bu ölçümün held-out recovery tahminini iki uç cancellation baseline'ına göre iyileştirip iyileştirmediğini sınamaktır.
+
+## 4. Cancellation in Systems — OSDI 2022
+
+**Kaynak:** Sethi, U., Pan, H., Lu, S., Musuvathi, M. ve Nath, S. (2022). *Cancellation in Systems: An Empirical Study of Task Cancellation Patterns and Failures*.
+**Bağlantı:** https://www.usenix.org/conference/osdi22/presentation/sethi
+
+### RetryCascade açısından anlamı
+
+- Cancellation, timeout oluştuğu anda fiziksel işin kesin ve anlık biçimde durması değildir.
+- Cancel initiation, propagation ve fulfillment ayrı hata/gecikme noktalarıdır.
+- Queue'da bekleyen iş ile başlamış veya kesilemez iş aynı cancellation davranışına sahip olmayabilir.
+- V1'in `cancellation=false` seçimi açık ve kontrollü bir model varsayımı olarak korunmalıdır.
+- Gelecek testbed uzantısı "cancellation iyidir" iddiasını değil; ölçülen cancellation gecikmesi/başarı oranının held-out recovery tahminine katkısını sınamalıdır.
+
+## Yeni başlangıç kaynakları
+
+- Habibi vd., *MSF-Model*: https://arxiv.org/abs/2309.16181
+- Isaacs vd., *Analyzing Metastable Failures*: https://sigops.org/s/conferences/hotos/2025/papers/hotos25-106.pdf
+- *Formal Analysis of Metastable Failures in Software Systems*: https://arxiv.org/abs/2510.03551
+- *RetryGuard*: https://arxiv.org/abs/2511.23278
+- Farahbakhsh vd., *Characterizing Metastable Faults and Failures*: https://arxiv.org/abs/2606.00942
