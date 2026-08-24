@@ -128,7 +128,7 @@ pub struct StageMetrics {
 /// Retry'siz pipeline koşusunun küçük, deterministik özeti.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct PipelineSummary {
-    pub logical_arrivals: u64,
+    pub source_arrival_attempts: u64,
     pub pipeline_completions: u64,
     pub last_pipeline_completion_at_us: Option<u64>,
     pub stale_completion_events: u64,
@@ -142,7 +142,7 @@ impl PipelineSummary {
     pub fn checksum_sha256(self) -> String {
         let mut hasher = Sha256::new();
         hasher.update(b"retrycascade-pipeline-summary-v2\0");
-        hasher.update(self.logical_arrivals.to_le_bytes());
+        hasher.update(self.source_arrival_attempts.to_le_bytes());
         hasher.update(self.pipeline_completions.to_le_bytes());
         hasher.update(self.stale_completion_events.to_le_bytes());
         hasher.update(self.trigger_reschedules.to_le_bytes());
@@ -315,11 +315,12 @@ impl Pipeline {
     ) -> Result<ScheduledAdmission, PipelineError> {
         let admission = self.admit_stage(0, scheduler, now, job)?;
 
-        self.summary.logical_arrivals = self.summary.logical_arrivals.checked_add(1).ok_or(
-            PipelineError::MetricCounterOverflow {
-                counter: "logical_arrivals",
-            },
-        )?;
+        self.summary.source_arrival_attempts =
+            self.summary.source_arrival_attempts.checked_add(1).ok_or(
+                PipelineError::MetricCounterOverflow {
+                    counter: "source_arrival_attempts",
+                },
+            )?;
         self.record_admission(0, now, admission.outcome)?;
 
         Ok(admission)
@@ -1190,7 +1191,7 @@ mod tests {
         assert_eq!(
             summary,
             PipelineSummary {
-                logical_arrivals: 3,
+                source_arrival_attempts: 3,
                 pipeline_completions: 3,
                 last_pipeline_completion_at_us: Some(50_000),
                 stale_completion_events: 0,

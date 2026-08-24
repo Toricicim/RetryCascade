@@ -1,5 +1,6 @@
 pub mod config;
 pub mod event;
+pub mod lifecycle;
 pub mod pipeline;
 pub mod rng;
 pub mod scheduler;
