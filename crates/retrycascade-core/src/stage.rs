@@ -7,7 +7,7 @@ use crate::types::{AttemptId, StageId};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StageJob {
     pub attempt_id: AttemptId,
-    pub service_demand_milli: u64,
+    pub service_demands_milli: [u64; 3],
     pub service_epoch: u64,
 }
 
@@ -15,9 +15,26 @@ impl StageJob {
     pub const fn new(attempt_id: AttemptId, service_demand_milli: u64) -> Self {
         Self {
             attempt_id,
-            service_demand_milli,
+            service_demands_milli: [service_demand_milli; 3],
             service_epoch: 0,
         }
+    }
+
+    pub const fn with_stage_demands(
+        attempt_id: AttemptId,
+        service_demands_milli: [u64; 3],
+    ) -> Self {
+        Self {
+            attempt_id,
+            service_demands_milli,
+            service_epoch: 0,
+        }
+    }
+
+    pub fn demand_for_stage(self, stage_id: StageId) -> Option<u64> {
+        self.service_demands_milli
+            .get(usize::from(stage_id.0))
+            .copied()
     }
 }
 

@@ -91,6 +91,11 @@ def resolve_run_config(
     stages = deepcopy(protocol["topology"]["stages"])
     retry_contract = deepcopy(protocol["retry_contract"])
     recovery = deepcopy(protocol["recovery"])
+    baseline = {
+        "window_us": protocol["baseline"]["window_us"],
+        "g0_statistic": protocol["baseline"]["g0_statistic"],
+        "q0_statistic": protocol["baseline"]["q0_statistic"],
+    }
 
     if not analysis_eligible:
         for stage in stages:
@@ -105,6 +110,7 @@ def resolve_run_config(
             "max_attempts_including_initial"
         ]
         recovery["window_us"] = selection["recovery_window_us"]
+        baseline["window_us"] = selection["recovery_window_us"]
 
     observation = (
         {
@@ -152,6 +158,7 @@ def resolve_run_config(
         "post_trigger_duration_us": post_trigger_duration_us,
         "run_end_us": run_end_us,
         "observation": observation,
+        "baseline": baseline,
         "recovery": recovery,
         "maximum_events": (
             protocol["safety"]["maximum_events_per_run"]

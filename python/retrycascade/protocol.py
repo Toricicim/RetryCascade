@@ -127,6 +127,25 @@ def validate_protocol_semantics(protocol: dict[str, Any]) -> None:
             "source shedding must remain outside the primary retry-budget policy"
         )
 
+    rng = protocol["rng"]
+    if rng["arrival_key"] != ["main_seed", "logical_arrival_index"]:
+        raise ProtocolError("arrival RNG key does not match the frozen contract")
+    if rng["service_key"] != [
+        "main_seed",
+        "logical_request_id",
+        "attempt_no",
+        "stage",
+    ]:
+        raise ProtocolError("service RNG key does not match the frozen contract")
+    if rng["jitter_key"] != [
+        "main_seed",
+        "logical_request_id",
+        "attempt_no",
+    ]:
+        raise ProtocolError(
+            "jitter RNG key must be shared by full-jitter and retry-budget"
+        )
+
     trigger = protocol["trigger"]
     _strictly_increasing(trigger["durations_us"], "trigger.durations_us")
     if trigger["start_us"] <= 0 or any(

@@ -1,8 +1,8 @@
-schema_version: "1.0.0"
+schema_version: "1.1.0"
 analysis_eligible: true
-protocol_version: "retrycascade-protocol-v1.0.0"
-model_version: "retrycascade-des-v1.0.0"
-rng_version: "keyed-chacha20-v1"
+protocol_version: "retrycascade-protocol-v1.2.0"
+model_version: "retrycascade-des-v1.1.0"
+rng_version: "keyed-chacha20-v2"
 seed: 1001
 rho_basis_points: 9000
 policy: immediate

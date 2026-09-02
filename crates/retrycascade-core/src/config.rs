@@ -86,7 +86,7 @@ pub enum TimeoutOrigin {
     SourceAdmission,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RetryCause {
     AttemptTimeout,
@@ -153,6 +153,26 @@ pub struct ObservationConfig {
     pub warmup_end_us: Tick,
     pub baseline_start_us: Tick,
     pub baseline_end_us: Tick,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum G0Statistic {
+    MedianWindowLogicalGoodput,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Q0Statistic {
+    P95OfWindowMeanTotalQueueOccupancy,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BaselineConfig {
+    pub window_us: u64,
+    pub g0_statistic: G0Statistic,
+    pub q0_statistic: Q0Statistic,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -224,6 +244,7 @@ pub struct ResolvedRunConfig {
     pub post_trigger_duration_us: u64,
     pub run_end_us: Tick,
     pub observation: ObservationConfig,
+    pub baseline: BaselineConfig,
     pub recovery: RecoveryConfig,
     pub rng: RngConfig,
     pub maximum_events: u64,

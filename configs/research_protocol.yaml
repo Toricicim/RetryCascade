@@ -1,7 +1,7 @@
-schema_version: "1.0.0"
-protocol_version: "retrycascade-protocol-v1.1.0"
-model_version: "retrycascade-des-v1.0.0"
-rng_version: "keyed-chacha20-v1"
+schema_version: "1.1.0"
+protocol_version: "retrycascade-protocol-v1.2.0"
+model_version: "retrycascade-des-v1.1.0"
+rng_version: "keyed-chacha20-v2"
 artifact_schema_version: "1.0.0"
 
 claim_scope:
@@ -173,7 +173,9 @@ rng:
     jitter: retry_jitter
   arrival_key: [main_seed, logical_arrival_index]
   service_key: [main_seed, logical_request_id, attempt_no, stage]
-  jitter_key: [main_seed, logical_request_id, attempt_no, policy]
+  # Policy adı özellikle anahtarda yoktur. Full-jitter ve retry-budget
+  # kolları aynı potansiyel çekilişi kullanarak adil bir ablation oluşturur.
+  jitter_key: [main_seed, logical_request_id, attempt_no]
   policy_must_not_change_arrival_trace: true
   policy_must_not_change_shared_service_samples: true
 

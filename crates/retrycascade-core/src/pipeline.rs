@@ -468,6 +468,16 @@ impl Pipeline {
         Ok(&self.stages[Self::stage_index(stage_id)?])
     }
 
+    pub fn total_waiting(&self) -> Result<u64, PipelineError> {
+        self.stages.iter().try_fold(0_u64, |total, stage| {
+            let waiting =
+                u64::try_from(stage.waiting_len()).map_err(|_| PipelineError::OccupancyOverflow)?;
+            total
+                .checked_add(waiting)
+                .ok_or(PipelineError::OccupancyOverflow)
+        })
+    }
+
     pub const fn summary(&self) -> PipelineSummary {
         self.summary
     }
@@ -531,7 +541,10 @@ impl Pipeline {
             });
         }
 
-        let remaining_work_scaled = u128::from(job.service_demand_milli)
+        let service_demand_milli = job
+            .demand_for_stage(stage_id)
+            .ok_or(PipelineError::UnknownStageId { stage_id })?;
+        let remaining_work_scaled = u128::from(service_demand_milli)
             .checked_mul(SCALED_WORK_PER_MILLI_WORK_UNIT)
             .ok_or(PipelineError::ServiceDurationOverflow)?;
         if remaining_work_scaled == 0 {
@@ -764,8 +777,12 @@ fn schedule_completion(
     service_rate_work_units_per_second: u64,
     job: StageJob,
 ) -> Result<Event, PipelineError> {
-    let delay_us =
-        service_duration_us(job.service_demand_milli, service_rate_work_units_per_second)?;
+    let service_demand_milli =
+        job.demand_for_stage(stage.id())
+            .ok_or(PipelineError::UnknownStageId {
+                stage_id: stage.id(),
+            })?;
+    let delay_us = service_duration_us(service_demand_milli, service_rate_work_units_per_second)?;
 
     Ok(scheduler.schedule_after(
         now,

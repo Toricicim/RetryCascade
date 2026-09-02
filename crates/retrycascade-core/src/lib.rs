@@ -1,9 +1,12 @@
 pub mod config;
 pub mod event;
 pub mod lifecycle;
+pub mod metrics;
 pub mod pipeline;
+pub mod policy;
 pub mod rng;
 pub mod scheduler;
+pub mod simulation;
 pub mod stage;
 pub mod types;
 pub mod validation;

@@ -115,6 +115,18 @@ def test_unknown_policy_is_rejected():
         validate_protocol_semantics(protocol)
 
 
+def test_policy_dependent_jitter_key_is_rejected():
+    protocol = load_and_validate(
+        PROTOCOL,
+        PROTOCOL_SCHEMA,
+        kind="protocol",
+    )
+    protocol["rng"]["jitter_key"].append("policy")
+
+    with pytest.raises(ProtocolError, match="shared"):
+        validate_protocol_semantics(protocol)
+
+
 def test_invalid_trigger_start_is_rejected():
     protocol = load_and_validate(
         PROTOCOL,

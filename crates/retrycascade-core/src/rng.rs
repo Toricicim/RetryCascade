@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 
 use crate::types::{LogicalRequestId, StageId};
 
-const RNG_VERSION: &str = "keyed-chacha20-v1";
+const RNG_VERSION: &str = "keyed-chacha20-v2";
 const ARRIVAL_NAMESPACE: &str = "external_arrival";
 const SERVICE_NAMESPACE: &str = "service_demand";
 const JITTER_NAMESPACE: &str = "retry_jitter";
@@ -44,23 +44,36 @@ impl KeyedRng {
         )
     }
 
-    pub fn jitter_u64(
+    /// Independent second lane for transforms (such as Box-Muller) that need
+    /// two uniforms for the same logical service-demand key.
+    pub fn service_aux_u64(
         self,
         logical_request_id: LogicalRequestId,
         attempt_no: u64,
-        policy_name: &str,
+        stage_id: StageId,
     ) -> u64 {
+        self.sample(
+            SERVICE_NAMESPACE,
+            &[
+                KeyPart::Unsigned(logical_request_id.0),
+                KeyPart::Unsigned(attempt_no),
+                KeyPart::Unsigned(u64::from(stage_id.0)),
+                KeyPart::Unsigned(1),
+            ],
+        )
+    }
+
+    pub fn jitter_u64(self, logical_request_id: LogicalRequestId, attempt_no: u64) -> u64 {
         self.sample(
             JITTER_NAMESPACE,
             &[
                 KeyPart::Unsigned(logical_request_id.0),
                 KeyPart::Unsigned(attempt_no),
-                KeyPart::Text(policy_name),
             ],
         )
     }
 
-    fn sample(self, namespace: &str, parts: &[KeyPart<'_>]) -> u64 {
+    fn sample(self, namespace: &str, parts: &[KeyPart]) -> u64 {
         let mut hasher = Sha256::new();
         encode_text(&mut hasher, RNG_VERSION);
         encode_unsigned(&mut hasher, self.main_seed);
@@ -72,10 +85,6 @@ impl KeyedRng {
                     hasher.update([0]);
                     encode_unsigned(&mut hasher, *value);
                 }
-                KeyPart::Text(value) => {
-                    hasher.update([1]);
-                    encode_text(&mut hasher, value);
-                }
             }
         }
 
@@ -85,9 +94,8 @@ impl KeyedRng {
     }
 }
 
-enum KeyPart<'a> {
+enum KeyPart {
     Unsigned(u64),
-    Text(&'a str),
 }
 
 fn encode_unsigned(hasher: &mut Sha256, value: u64) {
@@ -118,7 +126,7 @@ mod tests {
         let rng = KeyedRng::new(1001);
         let arrival = rng.arrival_u64(42);
         let service = rng.service_u64(LogicalRequestId(42), 0, StageId(0));
-        let jitter = rng.jitter_u64(LogicalRequestId(42), 0, "full_jitter");
+        let jitter = rng.jitter_u64(LogicalRequestId(42), 0);
 
         assert_ne!(arrival, service);
         assert_ne!(arrival, jitter);
@@ -126,20 +134,20 @@ mod tests {
     }
 
     #[test]
-    fn rng_v1_matches_the_frozen_golden_vector() {
+    fn rng_v2_matches_the_frozen_golden_vector() {
         let rng = KeyedRng::new(1001);
         let values = (
             rng.arrival_u64(42),
             rng.service_u64(LogicalRequestId(42), 0, StageId(0)),
-            rng.jitter_u64(LogicalRequestId(42), 0, "full_jitter"),
+            rng.jitter_u64(LogicalRequestId(42), 0),
         );
 
         assert_eq!(
             values,
             (
-                15_440_190_499_650_710_418,
-                9_063_676_014_666_612_407,
-                17_263_770_914_295_489_527,
+                10_790_455_817_477_884_213,
+                9_498_294_988_382_184_511,
+                17_532_989_064_502_912_287,
             )
         );
     }

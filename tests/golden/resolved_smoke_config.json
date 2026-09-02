@@ -1,1 +1,128 @@
-{"analysis_eligible":false,"arrival_process":{"distribution":"poisson","rate_definition":"rho_times_nominal_sink_rate"},"maximum_events":100000,"model_version":"retrycascade-des-v1.0.0","observation":{"arrivals_begin_us":0,"baseline_end_us":2000000,"baseline_start_us":1000000,"warmup_end_us":1000000},"policy":{"epsilon_us":1,"kind":"immediate"},"post_trigger_duration_us":3000000,"protocol_sha256":"7a3510cace0fbfc45d80e55f343bf23344e995aa95a2e688043edfd9010359d7","protocol_version":"retrycascade-protocol-v1.1.0","recovery":{"consecutive_non_overlapping_windows":3,"goodput_fraction_of_g0_basis_points":9500,"non_recovery_label":"operational_non_recovery_within_horizon","queue_margin_fraction_of_total_waiting_capacity_basis_points":500,"sensitivity":{"goodput_fractions_basis_points":[9000,9500,9900],"queue_margin_fractions_basis_points":[200,500,1000]},"window_us":1000000},"request_semantics":{"cancellation_after_other_attempt_success":false,"cancellation_after_timeout":false,"late_timed_out_completion_produces_goodput":false,"unique_goodput_per_logical_request":true,"workload_kind":"read_like_idempotent"},"retry_contract":{"max_attempts_including_initial":3,"maximum_one_retry_schedule_per_attempt_cause":true,"overall_logical_deadline_us":2000000,"per_attempt_timeout_us":500000,"retryable_causes":["attempt_timeout","queue_rejected"],"stop_creating_retries_after_logical_success":true,"stop_creating_retries_after_overall_deadline":true,"timeout_includes_all_queue_waiting":true,"timeout_origin":"source_admission"},"rho_basis_points":5000,"rng":{"arrival_key":["main_seed","logical_arrival_index"],"jitter_key":["main_seed","logical_request_id","attempt_no","policy"],"namespaces":{"arrival":"external_arrival","jitter":"retry_jitter","service":"service_demand"},"policy_must_not_change_arrival_trace":true,"policy_must_not_change_shared_service_samples":true,"service_key":["main_seed","logical_request_id","attempt_no","stage"]},"rng_version":"keyed-chacha20-v1","run_config_sha256":"7582e08da308452e2fac117b34232bf7538cef630b74cb0f388c7a3d736a1c05","run_end_us":6000000,"schema_version":"1.0.0","seed":900001,"service_demand":{"coefficient_of_variation_milli":500,"distribution":"lognormal","mean_work_units_milli":1000,"parameterization":"mean_and_coefficient_of_variation"},"stages":[{"name":"source","nominal_rate_work_units_per_second":140,"queue_capacity_waiting":8,"workers":1},{"name":"transform","nominal_rate_work_units_per_second":120,"queue_capacity_waiting":8,"workers":1},{"name":"sink","nominal_rate_work_units_per_second":100,"queue_capacity_waiting":8,"workers":1}],"trigger_capacity_multiplier_basis_points":5000,"trigger_duration_us":1000000,"trigger_enabled":true,"trigger_end_us":3000000,"trigger_start_us":2000000}
+{
+  "analysis_eligible": false,
+  "arrival_process": {
+    "distribution": "poisson",
+    "rate_definition": "rho_times_nominal_sink_rate"
+  },
+  "baseline": {
+    "g0_statistic": "median_window_logical_goodput",
+    "q0_statistic": "p95_of_window_mean_total_queue_occupancy",
+    "window_us": 1000000
+  },
+  "maximum_events": 100000,
+  "model_version": "retrycascade-des-v1.1.0",
+  "observation": {
+    "arrivals_begin_us": 0,
+    "baseline_end_us": 2000000,
+    "baseline_start_us": 1000000,
+    "warmup_end_us": 1000000
+  },
+  "policy": {
+    "epsilon_us": 1,
+    "kind": "immediate"
+  },
+  "post_trigger_duration_us": 3000000,
+  "protocol_sha256": "a0be2a55a47504b36534cae6c92becc81cfeba49a2aa3e468a71f89c4d15db85",
+  "protocol_version": "retrycascade-protocol-v1.2.0",
+  "recovery": {
+    "consecutive_non_overlapping_windows": 3,
+    "goodput_fraction_of_g0_basis_points": 9500,
+    "non_recovery_label": "operational_non_recovery_within_horizon",
+    "queue_margin_fraction_of_total_waiting_capacity_basis_points": 500,
+    "sensitivity": {
+      "goodput_fractions_basis_points": [
+        9000,
+        9500,
+        9900
+      ],
+      "queue_margin_fractions_basis_points": [
+        200,
+        500,
+        1000
+      ]
+    },
+    "window_us": 1000000
+  },
+  "request_semantics": {
+    "cancellation_after_other_attempt_success": false,
+    "cancellation_after_timeout": false,
+    "late_timed_out_completion_produces_goodput": false,
+    "unique_goodput_per_logical_request": true,
+    "workload_kind": "read_like_idempotent"
+  },
+  "retry_contract": {
+    "max_attempts_including_initial": 3,
+    "maximum_one_retry_schedule_per_attempt_cause": true,
+    "overall_logical_deadline_us": 2000000,
+    "per_attempt_timeout_us": 500000,
+    "retryable_causes": [
+      "attempt_timeout",
+      "queue_rejected"
+    ],
+    "stop_creating_retries_after_logical_success": true,
+    "stop_creating_retries_after_overall_deadline": true,
+    "timeout_includes_all_queue_waiting": true,
+    "timeout_origin": "source_admission"
+  },
+  "rho_basis_points": 5000,
+  "rng": {
+    "arrival_key": [
+      "main_seed",
+      "logical_arrival_index"
+    ],
+    "jitter_key": [
+      "main_seed",
+      "logical_request_id",
+      "attempt_no"
+    ],
+    "namespaces": {
+      "arrival": "external_arrival",
+      "jitter": "retry_jitter",
+      "service": "service_demand"
+    },
+    "policy_must_not_change_arrival_trace": true,
+    "policy_must_not_change_shared_service_samples": true,
+    "service_key": [
+      "main_seed",
+      "logical_request_id",
+      "attempt_no",
+      "stage"
+    ]
+  },
+  "rng_version": "keyed-chacha20-v2",
+  "run_config_sha256": "60a036f231c3a7f9d76ea98fdb588b70443e9a6cf6dd8b2649598953722d9284",
+  "run_end_us": 6000000,
+  "schema_version": "1.1.0",
+  "seed": 900001,
+  "service_demand": {
+    "coefficient_of_variation_milli": 500,
+    "distribution": "lognormal",
+    "mean_work_units_milli": 1000,
+    "parameterization": "mean_and_coefficient_of_variation"
+  },
+  "stages": [
+    {
+      "name": "source",
+      "nominal_rate_work_units_per_second": 140,
+      "queue_capacity_waiting": 8,
+      "workers": 1
+    },
+    {
+      "name": "transform",
+      "nominal_rate_work_units_per_second": 120,
+      "queue_capacity_waiting": 8,
+      "workers": 1
+    },
+    {
+      "name": "sink",
+      "nominal_rate_work_units_per_second": 100,
+      "queue_capacity_waiting": 8,
+      "workers": 1
+    }
+  ],
+  "trigger_capacity_multiplier_basis_points": 5000,
+  "trigger_duration_us": 1000000,
+  "trigger_enabled": true,
+  "trigger_end_us": 3000000,
+  "trigger_start_us": 2000000
+}

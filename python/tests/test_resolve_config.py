@@ -92,6 +92,11 @@ def test_resolver_combines_protocol_and_selection() -> None:
         "baseline_end_us": 300_000_000,
     }
     assert resolved["recovery"]["window_us"] == 30_000_000
+    assert resolved["baseline"] == {
+        "window_us": 30_000_000,
+        "g0_statistic": "median_window_logical_goodput",
+        "q0_statistic": "p95_of_window_mean_total_queue_occupancy",
+    }
     assert resolved["recovery"]["consecutive_non_overlapping_windows"] == 3
     assert resolved["recovery"]["goodput_fraction_of_g0_basis_points"] == 9500
     assert resolved["maximum_events"] == 20_000_000
@@ -104,6 +109,11 @@ def test_resolver_combines_protocol_and_selection() -> None:
         "logical_request_id",
         "attempt_no",
         "stage",
+    ]
+    assert resolved["rng"]["jitter_key"] == [
+        "main_seed",
+        "logical_request_id",
+        "attempt_no",
     ]
     assert resolved["rng"]["policy_must_not_change_arrival_trace"] is True
     assert len(resolved["protocol_sha256"]) == 64
@@ -131,6 +141,7 @@ def test_smoke_selection_overrides_runtime_sized_fields() -> None:
     assert resolved["run_end_us"] == 6_000_000
     assert resolved["maximum_events"] == 100_000
     assert resolved["recovery"]["window_us"] == 1_000_000
+    assert resolved["baseline"]["window_us"] == 1_000_000
     assert resolved["observation"] == {
         "arrivals_begin_us": 0,
         "warmup_end_us": 1_000_000,

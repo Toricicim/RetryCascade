@@ -11,10 +11,10 @@
     "stages", "retry_contract", "trigger_enabled", "trigger_start_us",
     "trigger_duration_us", "trigger_end_us",
     "trigger_capacity_multiplier_basis_points", "post_trigger_duration_us",
-    "run_end_us", "observation", "recovery", "rng", "maximum_events"
+    "run_end_us", "observation", "baseline", "recovery", "rng", "maximum_events"
   ],
   "properties": {
-    "schema_version": { "const": "1.0.0" },
+    "schema_version": { "const": "1.1.0" },
     "analysis_eligible": { "type": "boolean" },
     "protocol_version": { "type": "string", "minLength": 1 },
     "model_version": { "type": "string", "minLength": 1 },
@@ -134,6 +134,16 @@
         "warmup_end_us": { "$ref": "#/$defs/tick" },
         "baseline_start_us": { "$ref": "#/$defs/tick" },
         "baseline_end_us": { "$ref": "#/$defs/tick" }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window_us", "g0_statistic", "q0_statistic"],
+      "properties": {
+        "window_us": { "$ref": "#/$defs/positive_tick" },
+        "g0_statistic": { "const": "median_window_logical_goodput" },
+        "q0_statistic": { "const": "p95_of_window_mean_total_queue_occupancy" }
       }
     },
     "recovery": {

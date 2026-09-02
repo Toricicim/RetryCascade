@@ -22,6 +22,9 @@ pub enum LogicalTerminal {
     DeadlineAbandoned {
         at: Tick,
     },
+    AttemptsExhausted {
+        at: Tick,
+    },
     OutstandingAtHorizon {
         at: Tick,
     },
@@ -71,6 +74,7 @@ pub enum TimeoutHandling {
 pub enum DeadlineHandling {
     Abandoned,
     NoOpSucceeded,
+    NoOpTerminal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,6 +91,7 @@ pub struct LifecycleSummary {
     pub logical_arrivals: u64,
     pub logical_successes: u64,
     pub logical_deadline_abandoned: u64,
+    pub logical_attempts_exhausted: u64,
     pub logical_outstanding_at_horizon: u64,
     pub physical_attempts: u64,
     pub attempt_timeouts: u64,
@@ -217,6 +222,28 @@ impl LifecycleLedger {
         attempt_no: u32,
         service_demand_milli: u64,
     ) -> Result<LifecycleAdmission, LifecycleError> {
+        self.admit_attempt_with_stage_demands(
+            pipeline,
+            scheduler,
+            now,
+            logical_request_id,
+            attempt_id,
+            attempt_no,
+            [service_demand_milli; 3],
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn admit_attempt_with_stage_demands(
+        &mut self,
+        pipeline: &mut Pipeline,
+        scheduler: &mut Scheduler,
+        now: Tick,
+        logical_request_id: LogicalRequestId,
+        attempt_id: AttemptId,
+        attempt_no: u32,
+        service_demands_milli: [u64; 3],
+    ) -> Result<LifecycleAdmission, LifecycleError> {
         if attempt_no == 0 {
             return Err(LifecycleError::ZeroAttemptNumber);
         }
@@ -234,7 +261,7 @@ impl LifecycleLedger {
         let pipeline_admission = pipeline.admit_source(
             scheduler,
             now,
-            StageJob::new(attempt_id, service_demand_milli),
+            StageJob::with_stage_demands(attempt_id, service_demands_milli),
         )?;
         let (source_admitted, timeout_at, timeout_event, terminal) =
             match pipeline_admission.outcome {
@@ -331,6 +358,9 @@ impl LifecycleLedger {
         if matches!(logical.terminal, Some(LogicalTerminal::Succeeded { .. })) {
             return Ok(DeadlineHandling::NoOpSucceeded);
         }
+        if logical.terminal.is_some() {
+            return Ok(DeadlineHandling::NoOpTerminal);
+        }
         if logical.deadline_at != now {
             return Err(LifecycleError::UnexpectedEventTime {
                 entity: "logical deadline",
@@ -338,16 +368,35 @@ impl LifecycleLedger {
                 actual: now,
             });
         }
-        if logical.terminal.is_some() {
-            return Err(LifecycleError::LogicalAlreadyTerminal(logical_request_id));
-        }
-
         logical.terminal = Some(LogicalTerminal::DeadlineAbandoned { at: now });
         Self::increment(
             &mut self.summary.logical_deadline_abandoned,
             "logical_deadline_abandoned",
         )?;
         Ok(DeadlineHandling::Abandoned)
+    }
+
+    /// Marks a logical request terminal when the configured attempt limit has
+    /// been consumed. Physical work already in service remains in the pipeline
+    /// and will later be classified as late work.
+    pub fn mark_attempts_exhausted(
+        &mut self,
+        now: Tick,
+        logical_request_id: LogicalRequestId,
+    ) -> Result<bool, LifecycleError> {
+        let logical = self
+            .logical_requests
+            .get_mut(&logical_request_id)
+            .ok_or(LifecycleError::UnknownLogicalRequest(logical_request_id))?;
+        if logical.terminal.is_some() {
+            return Ok(false);
+        }
+        logical.terminal = Some(LogicalTerminal::AttemptsExhausted { at: now });
+        Self::increment(
+            &mut self.summary.logical_attempts_exhausted,
+            "logical_attempts_exhausted",
+        )?;
+        Ok(true)
     }
 
     pub fn observe_pipeline_progress(
@@ -394,6 +443,7 @@ impl LifecycleLedger {
         let classification = match logical.terminal {
             Some(LogicalTerminal::Succeeded { .. }) => AttemptProgress::DuplicateCompletion,
             Some(LogicalTerminal::DeadlineAbandoned { .. }) => AttemptProgress::LateCompletion,
+            Some(LogicalTerminal::AttemptsExhausted { .. }) => AttemptProgress::LateCompletion,
             Some(LogicalTerminal::OutstandingAtHorizon { .. }) => {
                 return Err(LifecycleError::LogicalAlreadyTerminal(logical_request_id));
             }

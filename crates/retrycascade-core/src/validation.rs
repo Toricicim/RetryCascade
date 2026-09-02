@@ -4,14 +4,14 @@ use thiserror::Error;
 
 use crate::config::{PolicyConfig, ResolvedRunConfig, RetryCause, StageName};
 
-pub const SUPPORTED_SCHEMA_VERSION: &str = "1.0.0";
-pub const SUPPORTED_MODEL_VERSION: &str = "retrycascade-des-v1.0.0";
-pub const SUPPORTED_RNG_VERSION: &str = "keyed-chacha20-v1";
+pub const SUPPORTED_SCHEMA_VERSION: &str = "1.1.0";
+pub const SUPPORTED_MODEL_VERSION: &str = "retrycascade-des-v1.1.0";
+pub const SUPPORTED_RNG_VERSION: &str = "keyed-chacha20-v2";
 pub const MAX_JSON_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 
 const EXPECTED_ARRIVAL_KEY: [&str; 2] = ["main_seed", "logical_arrival_index"];
 const EXPECTED_SERVICE_KEY: [&str; 4] = ["main_seed", "logical_request_id", "attempt_no", "stage"];
-const EXPECTED_JITTER_KEY: [&str; 4] = ["main_seed", "logical_request_id", "attempt_no", "policy"];
+const EXPECTED_JITTER_KEY: [&str; 3] = ["main_seed", "logical_request_id", "attempt_no"];
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -101,6 +101,7 @@ impl ResolvedRunConfig {
         self.validate_retry_contract()?;
         self.validate_trigger_and_observation()?;
         self.validate_policy()?;
+        self.validate_baseline()?;
         self.validate_recovery()?;
         self.validate_rng()?;
         Ok(())
@@ -371,6 +372,20 @@ impl ResolvedRunConfig {
                 min: 1,
                 max: self.post_trigger_duration_us,
                 actual: recovery_span,
+            });
+        }
+        Ok(())
+    }
+
+    fn validate_baseline(&self) -> Result<(), ValidationError> {
+        positive("baseline.window_us", self.baseline.window_us)?;
+        let duration =
+            self.observation.baseline_end_us.as_u64() - self.observation.baseline_start_us.as_u64();
+        if duration < self.baseline.window_us || !duration.is_multiple_of(self.baseline.window_us) {
+            return Err(ValidationError::InvalidFixedContract {
+                field: "baseline.window_us",
+                expected: "one or more whole windows inside the baseline interval",
+                actual: self.baseline.window_us.to_string(),
             });
         }
         Ok(())
