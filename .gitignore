@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 nvim.log
 docs/
+output/
+tmp/
