@@ -1,0 +1,26 @@
+study_version: "retrycascade-followup-v1.0.0"
+claim_scope: exploratory_synthetic_diagnostic
+question: "Does a budget preserve incident and early-post-incident user success beyond both jitter and no-retry, and how dependent is this on the client contract?"
+seeds: [910004, 910005, 910006, 910007, 910008]
+rho_basis_points: [5000, 5750, 6500]
+failure_basis_points: [0, 1000, 2000]
+reference_trigger_durations_us: [3000000, 10000000]
+policies: [no_retry, full_jitter, retry_budget]
+refill_basis_points: 1000
+time_series_window_us: 30000000
+early_post_duration_us: 60000000
+client_contract_sensitivity:
+  rho_basis_points: 6500
+  failure_basis_points: 1000
+  reference_trigger_duration_us: 10000000
+  variants: [await_existing, accept_until_deadline, accept_and_await]
+analysis:
+  primary_outputs: [during_reference_success_ratio, early_post_success_ratio, matched_incident_excess_failure_ratio]
+  practical_success_difference_basis_points: 100
+  practical_work_difference_basis_points: 1000
+  dominance_policy: disabled_no_universal_ranking
+  recovery_index: descriptive_bottleneck_of_goodput_and_queue_not_a_new_recovery_definition
+  ewma_half_life_us: 60000000
+  absolute_success_target_basis_points: 9500
+  confirmation_status: not_run_select_question_and_cells_before_confirmation
+  correlation_and_cancellation: separate_conditional_research_not_implemented

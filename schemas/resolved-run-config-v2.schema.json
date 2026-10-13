@@ -1,0 +1,664 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://retrycascade.local/schemas/resolved-run-config-v2.schema.json",
+  "title": "RetryCascade fully resolved single-run configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "analysis_eligible",
+    "protocol_version",
+    "model_version",
+    "rng_version",
+    "protocol_sha256",
+    "run_config_sha256",
+    "seed",
+    "rho_basis_points",
+    "arrival_process",
+    "service_demand",
+    "request_semantics",
+    "policy",
+    "stages",
+    "retry_contract",
+    "trigger_enabled",
+    "trigger_start_us",
+    "trigger_duration_us",
+    "trigger_end_us",
+    "trigger_capacity_multiplier_basis_points",
+    "post_trigger_duration_us",
+    "run_end_us",
+    "observation",
+    "baseline",
+    "recovery",
+    "rng",
+    "maximum_events",
+    "extensions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "analysis_eligible": {
+      "type": "boolean"
+    },
+    "protocol_version": {
+      "const": "retrycascade-protocol-v2.0.0"
+    },
+    "model_version": {
+      "const": "retrycascade-des-v2.0.0"
+    },
+    "rng_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "protocol_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "run_config_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "rho_basis_points": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    },
+    "maximum_events": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "trigger_enabled": {
+      "type": "boolean"
+    },
+    "trigger_start_us": {
+      "$ref": "#/$defs/tick"
+    },
+    "trigger_duration_us": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615
+    },
+    "trigger_end_us": {
+      "$ref": "#/$defs/tick"
+    },
+    "post_trigger_duration_us": {
+      "$ref": "#/$defs/positive_tick"
+    },
+    "run_end_us": {
+      "$ref": "#/$defs/positive_tick"
+    },
+    "trigger_capacity_multiplier_basis_points": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "arrival_process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution",
+        "rate_definition"
+      ],
+      "properties": {
+        "distribution": {
+          "const": "poisson"
+        },
+        "rate_definition": {
+          "const": "rho_times_nominal_sink_rate"
+        }
+      }
+    },
+    "service_demand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution",
+        "parameterization",
+        "mean_work_units_milli",
+        "coefficient_of_variation_milli"
+      ],
+      "properties": {
+        "distribution": {
+          "const": "lognormal"
+        },
+        "parameterization": {
+          "const": "mean_and_coefficient_of_variation"
+        },
+        "mean_work_units_milli": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "coefficient_of_variation_milli": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "request_semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workload_kind",
+        "cancellation_after_timeout",
+        "cancellation_after_other_attempt_success",
+        "late_timed_out_completion_produces_goodput",
+        "unique_goodput_per_logical_request"
+      ],
+      "properties": {
+        "workload_kind": {
+          "const": "read_like_idempotent"
+        },
+        "cancellation_after_timeout": {
+          "const": false
+        },
+        "cancellation_after_other_attempt_success": {
+          "const": false
+        },
+        "late_timed_out_completion_produces_goodput": {
+          "const": false
+        },
+        "unique_goodput_per_logical_request": {
+          "const": true
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/source_stage"
+        },
+        {
+          "$ref": "#/$defs/transform_stage"
+        },
+        {
+          "$ref": "#/$defs/sink_stage"
+        }
+      ],
+      "items": false
+    },
+    "retry_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "per_attempt_timeout_us",
+        "timeout_origin",
+        "timeout_includes_all_queue_waiting",
+        "overall_logical_deadline_us",
+        "max_attempts_including_initial",
+        "retryable_causes",
+        "maximum_one_retry_schedule_per_attempt_cause",
+        "stop_creating_retries_after_logical_success",
+        "stop_creating_retries_after_overall_deadline"
+      ],
+      "properties": {
+        "per_attempt_timeout_us": {
+          "$ref": "#/$defs/positive_tick"
+        },
+        "timeout_origin": {
+          "const": "source_admission"
+        },
+        "timeout_includes_all_queue_waiting": {
+          "const": true
+        },
+        "overall_logical_deadline_us": {
+          "$ref": "#/$defs/positive_tick"
+        },
+        "max_attempts_including_initial": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "retryable_causes": {
+          "const": [
+            "attempt_timeout",
+            "queue_rejected",
+            "pre_admission_failure"
+          ]
+        },
+        "maximum_one_retry_schedule_per_attempt_cause": {
+          "const": true
+        },
+        "stop_creating_retries_after_logical_success": {
+          "const": true
+        },
+        "stop_creating_retries_after_overall_deadline": {
+          "const": true
+        }
+      }
+    },
+    "policy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "epsilon_us"
+          ],
+          "properties": {
+            "kind": {
+              "const": "immediate"
+            },
+            "epsilon_us": {
+              "$ref": "#/$defs/positive_tick"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "base_us",
+            "cap_us"
+          ],
+          "properties": {
+            "kind": {
+              "const": "exponential"
+            },
+            "base_us": {
+              "$ref": "#/$defs/positive_tick"
+            },
+            "cap_us": {
+              "$ref": "#/$defs/positive_tick"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "base_us",
+            "cap_us",
+            "rng_namespace"
+          ],
+          "properties": {
+            "kind": {
+              "const": "full_jitter"
+            },
+            "base_us": {
+              "$ref": "#/$defs/positive_tick"
+            },
+            "cap_us": {
+              "$ref": "#/$defs/positive_tick"
+            },
+            "rng_namespace": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "base_us",
+            "cap_us",
+            "token_bucket"
+          ],
+          "properties": {
+            "kind": {
+              "const": "retry_budget"
+            },
+            "base_us": {
+              "$ref": "#/$defs/positive_tick"
+            },
+            "cap_us": {
+              "$ref": "#/$defs/positive_tick"
+            },
+            "token_bucket": {
+              "$ref": "#/$defs/token_bucket"
+            }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arrivals_begin_us",
+        "warmup_end_us",
+        "baseline_start_us",
+        "baseline_end_us"
+      ],
+      "properties": {
+        "arrivals_begin_us": {
+          "$ref": "#/$defs/tick"
+        },
+        "warmup_end_us": {
+          "$ref": "#/$defs/tick"
+        },
+        "baseline_start_us": {
+          "$ref": "#/$defs/tick"
+        },
+        "baseline_end_us": {
+          "$ref": "#/$defs/tick"
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "window_us",
+        "g0_statistic",
+        "q0_statistic"
+      ],
+      "properties": {
+        "window_us": {
+          "$ref": "#/$defs/positive_tick"
+        },
+        "g0_statistic": {
+          "const": "median_window_logical_goodput"
+        },
+        "q0_statistic": {
+          "const": "p95_of_window_mean_total_queue_occupancy"
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "window_us",
+        "consecutive_non_overlapping_windows",
+        "goodput_fraction_of_g0_basis_points",
+        "queue_margin_fraction_of_total_waiting_capacity_basis_points",
+        "sensitivity",
+        "non_recovery_label"
+      ],
+      "properties": {
+        "window_us": {
+          "$ref": "#/$defs/positive_tick"
+        },
+        "consecutive_non_overlapping_windows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "goodput_fraction_of_g0_basis_points": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "queue_margin_fraction_of_total_waiting_capacity_basis_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "sensitivity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "goodput_fractions_basis_points",
+            "queue_margin_fractions_basis_points"
+          ],
+          "properties": {
+            "goodput_fractions_basis_points": {
+              "$ref": "#/$defs/basis_point_array"
+            },
+            "queue_margin_fractions_basis_points": {
+              "$ref": "#/$defs/basis_point_array"
+            }
+          }
+        },
+        "non_recovery_label": {
+          "const": "operational_non_recovery_within_horizon"
+        }
+      }
+    },
+    "rng": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespaces",
+        "arrival_key",
+        "service_key",
+        "jitter_key",
+        "policy_must_not_change_arrival_trace",
+        "policy_must_not_change_shared_service_samples"
+      ],
+      "properties": {
+        "namespaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "arrival",
+            "service",
+            "jitter"
+          ],
+          "properties": {
+            "arrival": {
+              "type": "string",
+              "minLength": 1
+            },
+            "service": {
+              "type": "string",
+              "minLength": 1
+            },
+            "jitter": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "arrival_key": {
+          "$ref": "#/$defs/nonempty_string_array"
+        },
+        "service_key": {
+          "$ref": "#/$defs/nonempty_string_array"
+        },
+        "jitter_key": {
+          "$ref": "#/$defs/nonempty_string_array"
+        },
+        "policy_must_not_change_arrival_trace": {
+          "const": true
+        },
+        "policy_must_not_change_shared_service_samples": {
+          "const": true
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_admission_failure_basis_points",
+        "failure_notification_delay_us",
+        "demand_identity",
+        "budget_denial_finishes_logical_request"
+      ],
+      "properties": {
+        "pre_admission_failure_basis_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "failure_notification_delay_us": {
+          "$ref": "#/$defs/positive_tick"
+        },
+        "demand_identity": {
+          "enum": [
+            "request_stable",
+            "independent_attempts"
+          ]
+        },
+        "budget_denial_finishes_logical_request": {
+          "type": "boolean"
+        },
+        "accept_timed_out_completion": {
+          "type": "boolean"
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "window_us",
+            "reference_trigger_duration_us"
+          ],
+          "properties": {
+            "window_us": {
+              "const": 30000000
+            },
+            "reference_trigger_duration_us": {
+              "$ref": "#/$defs/tick"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615
+    },
+    "positive_tick": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 18446744073709551615
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "workers",
+        "queue_capacity_waiting",
+        "nominal_rate_work_units_per_second"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "source",
+            "transform",
+            "sink"
+          ]
+        },
+        "workers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "queue_capacity_waiting": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nominal_rate_work_units_per_second": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "source_stage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stage"
+        },
+        {
+          "properties": {
+            "name": {
+              "const": "source"
+            }
+          }
+        }
+      ]
+    },
+    "transform_stage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stage"
+        },
+        {
+          "properties": {
+            "name": {
+              "const": "transform"
+            }
+          }
+        }
+      ]
+    },
+    "sink_stage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stage"
+        },
+        {
+          "properties": {
+            "name": {
+              "const": "sink"
+            }
+          }
+        }
+      ]
+    },
+    "token_bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "units_per_token",
+        "retry_cost_units",
+        "refill_units_per_unique_on_time_success",
+        "capacity_units",
+        "initial_units",
+        "token_denial_result"
+      ],
+      "properties": {
+        "units_per_token": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retry_cost_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "refill_units_per_unique_on_time_success": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "capacity_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "initial_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "token_denial_result": {
+          "const": "retry_denied"
+        }
+      }
+    },
+    "basis_point_array": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10000
+      }
+    },
+    "nonempty_string_array": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

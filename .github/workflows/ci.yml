@@ -1,0 +1,42 @@
+name: Verify RetryCascade
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable action
+        with:
+          toolchain: 1.97.1
+          components: rustfmt, clippy
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: "0.12.22"
+          python-version: "3.12"
+      - name: Install locked Python dependencies
+        run: make setup
+      - name: Verify Rust and Python contracts
+        run: make test
+      - name: Run calendar-aligned follow-up smoke study
+        run: make followup-smoke
+      - name: Verify and replay generated artifacts
+        working-directory: python
+        run: |
+          uv run --locked python -m retrycascade verify --output ../output/v2-followup-smoke
+          uv run --locked python -m retrycascade reproduce --output ../output/v2-followup-smoke

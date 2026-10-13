@@ -16,6 +16,9 @@ pub enum TriggerTransition {
 /// hangi stage'deki ve hangi service epoch'undaki işinin bittiğini de taşır.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventKind {
+    PreAdmissionFailure {
+        attempt_id: AttemptId,
+    },
     StageCompletion {
         attempt_id: AttemptId,
         stage_id: StageId,
@@ -45,7 +48,7 @@ impl EventKind {
     /// Küçük sayı, aynı tick içinde daha yüksek öncelik demektir.
     pub const fn priority(self) -> u8 {
         match self {
-            Self::StageCompletion { .. } => 0,
+            Self::StageCompletion { .. } | Self::PreAdmissionFailure { .. } => 0,
             Self::AttemptTimeout { .. } => 1,
             Self::LogicalDeadline { .. } => 2,
             Self::TriggerBoundary { .. } => 3,

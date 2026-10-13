@@ -69,15 +69,24 @@ pub enum ValidationError {
 
 impl ResolvedRunConfig {
     pub fn validate(&self) -> Result<(), ValidationError> {
+        let v2 = self.model_version == "retrycascade-des-v2.0.0";
         validate_version(
             "schema_version",
             &self.schema_version,
-            SUPPORTED_SCHEMA_VERSION,
+            if v2 {
+                "2.0.0"
+            } else {
+                SUPPORTED_SCHEMA_VERSION
+            },
         )?;
         validate_version(
             "model_version",
             &self.model_version,
-            SUPPORTED_MODEL_VERSION,
+            if v2 {
+                "retrycascade-des-v2.0.0"
+            } else {
+                SUPPORTED_MODEL_VERSION
+            },
         )?;
         validate_version("rng_version", &self.rng_version, SUPPORTED_RNG_VERSION)?;
         nonempty("protocol_version", &self.protocol_version)?;
@@ -104,6 +113,52 @@ impl ResolvedRunConfig {
         self.validate_baseline()?;
         self.validate_recovery()?;
         self.validate_rng()?;
+        if v2 {
+            range(
+                "retry_contract.max_attempts_including_initial",
+                self.retry_contract.max_attempts_including_initial,
+                1,
+                3,
+            )?;
+            let ext = self
+                .extensions
+                .as_ref()
+                .ok_or(ValidationError::InvalidFixedContract {
+                    field: "extensions",
+                    expected: "V2 extensions present",
+                    actual: "missing".into(),
+                })?;
+            range(
+                "extensions.pre_admission_failure_basis_points",
+                ext.pre_admission_failure_basis_points,
+                0,
+                10_000,
+            )?;
+            positive(
+                "extensions.failure_notification_delay_us",
+                ext.failure_notification_delay_us,
+            )?;
+            if let Some(observation) = &ext.observation {
+                range(
+                    "extensions.observation.window_us",
+                    observation.window_us,
+                    30_000_000,
+                    30_000_000,
+                )?;
+                range(
+                    "extensions.observation.reference_trigger_duration_us",
+                    observation.reference_trigger_duration_us,
+                    0,
+                    self.post_trigger_duration_us,
+                )?;
+            }
+        } else if self.extensions.is_some() {
+            return Err(ValidationError::InvalidFixedContract {
+                field: "extensions",
+                expected: "absent for V1",
+                actual: "present".into(),
+            });
+        }
         Ok(())
     }
 
@@ -185,7 +240,11 @@ impl ResolvedRunConfig {
             "retry_contract.max_attempts_including_initial",
             retry.max_attempts_including_initial,
         )?;
-        if retry.retryable_causes != [RetryCause::AttemptTimeout, RetryCause::QueueRejected] {
+        let mut expected_causes = vec![RetryCause::AttemptTimeout, RetryCause::QueueRejected];
+        if self.model_version == "retrycascade-des-v2.0.0" {
+            expected_causes.push(RetryCause::PreAdmissionFailure);
+        }
+        if retry.retryable_causes != expected_causes {
             return Err(ValidationError::InvalidFixedContract {
                 field: "retry_contract.retryable_causes",
                 expected: "[attempt_timeout, queue_rejected]",

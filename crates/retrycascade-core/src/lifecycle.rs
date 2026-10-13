@@ -25,6 +25,9 @@ pub enum LogicalTerminal {
     AttemptsExhausted {
         at: Tick,
     },
+    BudgetDenied {
+        at: Tick,
+    },
     OutstandingAtHorizon {
         at: Tick,
     },
@@ -44,6 +47,7 @@ pub enum AttemptTerminal {
     LateCompletion { at: Tick },
     DuplicateCompletion { at: Tick },
     QueueRejected { at: Tick, stage_id: StageId },
+    PreAdmissionFailure { at: Tick },
     OutstandingAtHorizon { at: Tick, timed_out: bool },
 }
 
@@ -92,6 +96,7 @@ pub struct LifecycleSummary {
     pub logical_successes: u64,
     pub logical_deadline_abandoned: u64,
     pub logical_attempts_exhausted: u64,
+    pub logical_budget_denied: u64,
     pub logical_outstanding_at_horizon: u64,
     pub physical_attempts: u64,
     pub attempt_timeouts: u64,
@@ -99,6 +104,7 @@ pub struct LifecycleSummary {
     pub attempt_late_completions: u64,
     pub attempt_duplicate_completions: u64,
     pub attempt_queue_rejections: u64,
+    pub attempt_pre_admission_failures: u64,
     pub attempt_outstanding_at_horizon: u64,
 }
 
@@ -164,8 +170,12 @@ pub enum LifecycleError {
 #[derive(Debug)]
 pub struct LifecycleLedger {
     spec: LifecycleSpec,
+    accept_timed_out_completion: bool,
     logical_requests: BTreeMap<LogicalRequestId, LogicalRequest>,
     attempts: BTreeMap<AttemptId, Attempt>,
+    /// Authoritative association: do not infer logical IDs from numeric attempt
+    /// IDs. Queries inspect only the bounded attempts belonging to one request.
+    attempts_by_logical: BTreeMap<LogicalRequestId, Vec<AttemptId>>,
     summary: LifecycleSummary,
 }
 
@@ -176,9 +186,27 @@ impl LifecycleLedger {
         }
         Ok(Self {
             spec,
+            accept_timed_out_completion: false,
             logical_requests: BTreeMap::new(),
             attempts: BTreeMap::new(),
+            attempts_by_logical: BTreeMap::new(),
             summary: LifecycleSummary::default(),
+        })
+    }
+
+    /// Structural sensitivity only: a parent-level receiver can still accept
+    /// a timed-out attempt before its logical deadline. Strict RPC is default.
+    pub fn set_accept_timed_out_completion(&mut self, enabled: bool) {
+        self.accept_timed_out_completion = enabled;
+    }
+
+    pub fn has_live_attempt_for_logical(&self, id: LogicalRequestId) -> bool {
+        self.attempts_by_logical.get(&id).is_some_and(|ids| {
+            ids.iter().any(|attempt_id| {
+                self.attempts
+                    .get(attempt_id)
+                    .is_some_and(|attempt| attempt.terminal.is_none())
+            })
         })
     }
 
@@ -304,6 +332,10 @@ impl LifecycleLedger {
                 terminal,
             },
         );
+        self.attempts_by_logical
+            .entry(logical_request_id)
+            .or_default()
+            .push(attempt_id);
         Self::increment(&mut self.summary.physical_attempts, "physical_attempts")?;
         Ok(LifecycleAdmission {
             pipeline_admission,
@@ -344,6 +376,90 @@ impl LifecycleLedger {
         attempt.timed_out_at = Some(now);
         Self::increment(&mut self.summary.attempt_timeouts, "attempt_timeouts")?;
         Ok(TimeoutHandling::TimedOut)
+    }
+
+    pub fn register_pre_admission_failure(
+        &mut self,
+        scheduler: &mut Scheduler,
+        now: Tick,
+        id: LogicalRequestId,
+        attempt_id: AttemptId,
+        attempt_no: u32,
+        delay_us: u64,
+    ) -> Result<(), LifecycleError> {
+        let logical = self
+            .logical_requests
+            .get(&id)
+            .ok_or(LifecycleError::UnknownLogicalRequest(id))?;
+        if logical.terminal.is_some() {
+            return Err(LifecycleError::LogicalAlreadyTerminal(id));
+        }
+        if attempt_no == 0 {
+            return Err(LifecycleError::ZeroAttemptNumber);
+        }
+        if self.attempts.contains_key(&attempt_id) {
+            return Err(LifecycleError::DuplicateAttempt(attempt_id));
+        }
+        scheduler.schedule_after(
+            now,
+            delay_us,
+            crate::event::EventKind::PreAdmissionFailure { attempt_id },
+        )?;
+        self.attempts.insert(
+            attempt_id,
+            Attempt {
+                id: attempt_id,
+                logical_request_id: id,
+                attempt_no,
+                source_admitted: false,
+                timeout_at: None,
+                timed_out_at: None,
+                terminal: None,
+            },
+        );
+        self.attempts_by_logical
+            .entry(id)
+            .or_default()
+            .push(attempt_id);
+        Self::increment(&mut self.summary.physical_attempts, "physical_attempts")
+    }
+
+    pub fn handle_pre_admission_failure(
+        &mut self,
+        now: Tick,
+        id: AttemptId,
+    ) -> Result<(), LifecycleError> {
+        let attempt = self
+            .attempts
+            .get_mut(&id)
+            .ok_or(LifecycleError::UnknownAttempt(id))?;
+        if attempt.terminal.is_some() || attempt.source_admitted {
+            return Err(LifecycleError::AttemptAlreadyTerminal(id));
+        }
+        attempt.terminal = Some(AttemptTerminal::PreAdmissionFailure { at: now });
+        Self::increment(
+            &mut self.summary.attempt_pre_admission_failures,
+            "pre_admission_failures",
+        )
+    }
+
+    pub fn mark_budget_denied(
+        &mut self,
+        now: Tick,
+        id: LogicalRequestId,
+    ) -> Result<(), LifecycleError> {
+        let logical = self
+            .logical_requests
+            .get_mut(&id)
+            .ok_or(LifecycleError::UnknownLogicalRequest(id))?;
+        if logical.terminal.is_none() {
+            logical.terminal = Some(LogicalTerminal::BudgetDenied { at: now });
+            Self::increment(
+                &mut self.summary.logical_budget_denied,
+                "logical_budget_denied",
+            )?;
+        }
+        Ok(())
     }
 
     pub fn handle_logical_deadline(
@@ -444,10 +560,13 @@ impl LifecycleLedger {
             Some(LogicalTerminal::Succeeded { .. }) => AttemptProgress::DuplicateCompletion,
             Some(LogicalTerminal::DeadlineAbandoned { .. }) => AttemptProgress::LateCompletion,
             Some(LogicalTerminal::AttemptsExhausted { .. }) => AttemptProgress::LateCompletion,
+            Some(LogicalTerminal::BudgetDenied { .. }) => AttemptProgress::LateCompletion,
             Some(LogicalTerminal::OutstandingAtHorizon { .. }) => {
                 return Err(LifecycleError::LogicalAlreadyTerminal(logical_request_id));
             }
-            None if timed_out => AttemptProgress::LateCompletion,
+            None if timed_out && !self.accept_timed_out_completion => {
+                AttemptProgress::LateCompletion
+            }
             None if now > logical.deadline_at => {
                 return Err(LifecycleError::DeadlineOrderingViolation);
             }
@@ -545,6 +664,11 @@ impl LifecycleLedger {
 
     pub fn logical_request(&self, id: LogicalRequestId) -> Option<&LogicalRequest> {
         self.logical_requests.get(&id)
+    }
+
+    /// Read-only view used for arrival-cohort diagnostics after a run.
+    pub fn logical_requests(&self) -> impl Iterator<Item = &LogicalRequest> {
+        self.logical_requests.values()
     }
 
     pub fn attempt(&self, id: AttemptId) -> Option<&Attempt> {
@@ -682,6 +806,67 @@ mod tests {
         assert_eq!(ledger.summary().attempt_timeouts, 0);
         assert_eq!(ledger.summary().logical_successes, 1);
         assert!(ledger.conservation().all_terminal());
+    }
+
+    #[test]
+    fn live_attempt_index_matches_records_for_arbitrary_identifiers() {
+        let mut pipeline = pipeline_with_capacity(1, 2);
+        let mut scheduler = Scheduler::new();
+        let mut ledger = LifecycleLedger::new(LifecycleSpec {
+            per_attempt_timeout_us: 5_000,
+            overall_logical_deadline_us: 20_000,
+        })
+        .unwrap();
+        let first = LogicalRequestId(900);
+        let second = LogicalRequestId(7);
+        for id in [first, second] {
+            ledger
+                .register_logical_request(&mut scheduler, Tick::ZERO, id)
+                .unwrap();
+        }
+        ledger
+            .register_pre_admission_failure(&mut scheduler, Tick::ZERO, first, AttemptId(3), 1, 10)
+            .unwrap();
+        ledger
+            .register_pre_admission_failure(
+                &mut scheduler,
+                Tick::ZERO,
+                second,
+                AttemptId(999),
+                1,
+                10,
+            )
+            .unwrap();
+        ledger
+            .admit_attempt(
+                &mut pipeline,
+                &mut scheduler,
+                Tick::ZERO,
+                first,
+                AttemptId(42),
+                2,
+                1_000,
+            )
+            .unwrap();
+        assert!(!ledger.has_live_attempt_for_logical(LogicalRequestId(42)));
+        ledger
+            .handle_pre_admission_failure(Tick::new(10), AttemptId(3))
+            .unwrap();
+        assert!(ledger.has_live_attempt_for_logical(first));
+        ledger
+            .handle_pre_admission_failure(Tick::new(10), AttemptId(999))
+            .unwrap();
+        assert!(!ledger.has_live_attempt_for_logical(second));
+        for id in [first, second, LogicalRequestId(123)] {
+            let full_scan = ledger
+                .attempts
+                .values()
+                .any(|attempt| attempt.logical_request_id == id && attempt.terminal.is_none());
+            assert_eq!(ledger.has_live_attempt_for_logical(id), full_scan);
+        }
+        ledger.close_horizon(Tick::new(100)).unwrap();
+        assert!(!ledger.has_live_attempt_for_logical(first));
+        assert_eq!(ledger.summary().physical_attempts, 3);
     }
 
     #[test]

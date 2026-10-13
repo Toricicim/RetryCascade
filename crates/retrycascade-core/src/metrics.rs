@@ -135,6 +135,36 @@ pub enum MetricsError {
     OutputOverflow,
 }
 
+/// Half-open calendar bins on a fixed lattice anchored at incident onset.
+/// Edge bins may be partial; no event at `end` belongs to the preceding bin.
+pub fn calendar_windows(
+    start: Tick,
+    end: Tick,
+    anchor: Tick,
+    window_us: u64,
+) -> Result<Vec<(Tick, Tick)>, MetricsError> {
+    if start >= end || window_us == 0 {
+        return Err(MetricsError::InvalidWindow);
+    }
+    let mut result = Vec::new();
+    let mut cursor = start;
+    while cursor < end {
+        let distance = if cursor < anchor {
+            let remainder = (anchor.as_u64() - cursor.as_u64()) % window_us;
+            if remainder == 0 { window_us } else { remainder }
+        } else {
+            window_us - (cursor.as_u64() - anchor.as_u64()) % window_us
+        };
+        let next = cursor
+            .checked_add(distance)
+            .ok_or(MetricsError::ArithmeticOverflow)?
+            .min(end);
+        result.push((cursor, next));
+        cursor = next;
+    }
+    Ok(result)
+}
+
 pub fn evaluate_recovery(
     spec: RecoverySpec,
     goodput_completion_times: &[Tick],
@@ -348,7 +378,7 @@ fn mean_milli(area_slot_us: u128, duration_us: u64) -> Result<u64, MetricsError>
 
 #[cfg(test)]
 mod tests {
-    use super::{QueueTimeline, RecoverySpec, evaluate_recovery};
+    use super::{QueueTimeline, RecoverySpec, calendar_windows, evaluate_recovery};
     use crate::types::Tick;
 
     #[test]
@@ -360,6 +390,21 @@ mod tests {
 
         assert_eq!(queue.area_between(Tick::ZERO, Tick::new(50)), Ok(50));
         assert_eq!(queue.area_between(Tick::new(20), Tick::new(35)), Ok(25));
+    }
+
+    #[test]
+    fn calendar_bins_are_anchored_and_keep_partial_edges() {
+        assert_eq!(
+            calendar_windows(Tick::ZERO, Tick::new(105), Tick::new(35), 30).unwrap(),
+            vec![
+                (Tick::ZERO, Tick::new(5)),
+                (Tick::new(5), Tick::new(35)),
+                (Tick::new(35), Tick::new(65)),
+                (Tick::new(65), Tick::new(95)),
+                (Tick::new(95), Tick::new(105)),
+            ]
+        );
+        assert!(calendar_windows(Tick::ZERO, Tick::new(1), Tick::ZERO, 0).is_err());
     }
 
     #[test]

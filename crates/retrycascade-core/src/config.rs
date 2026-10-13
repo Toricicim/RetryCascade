@@ -91,6 +91,7 @@ pub enum TimeoutOrigin {
 pub enum RetryCause {
     AttemptTimeout,
     QueueRejected,
+    PreAdmissionFailure,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -101,7 +102,7 @@ pub struct RetryContractConfig {
     pub timeout_includes_all_queue_waiting: bool,
     pub overall_logical_deadline_us: u64,
     pub max_attempts_including_initial: u64,
-    pub retryable_causes: [RetryCause; 2],
+    pub retryable_causes: Vec<RetryCause>,
     pub maximum_one_retry_schedule_per_attempt_cause: bool,
     pub stop_creating_retries_after_logical_success: bool,
     pub stop_creating_retries_after_overall_deadline: bool,
@@ -248,6 +249,35 @@ pub struct ResolvedRunConfig {
     pub recovery: RecoveryConfig,
     pub rng: RngConfig,
     pub maximum_events: u64,
+    #[serde(default)]
+    pub extensions: Option<V2Config>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DemandIdentity {
+    IndependentAttempts,
+    RequestStable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct V2Config {
+    pub pre_admission_failure_basis_points: u64,
+    pub failure_notification_delay_us: u64,
+    pub demand_identity: DemandIdentity,
+    pub budget_denial_finishes_logical_request: bool,
+    #[serde(default)]
+    pub accept_timed_out_completion: bool,
+    #[serde(default)]
+    pub observation: Option<RecoveryObservationConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryObservationConfig {
+    pub window_us: u64,
+    pub reference_trigger_duration_us: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

@@ -1,0 +1,72 @@
+schema_version: "2.0.0"
+protocol_version: "retrycascade-protocol-v2.0.0"
+model_version: "retrycascade-des-v2.0.0"
+base_protocol: "research_protocol.yaml"
+base_protocol_sha256: "a0be2a55a47504b36534cae6c92becc81cfeba49a2aa3e468a71f89c4d15db85"
+claim_scope: exploratory_synthetic_benchmark
+primary_hypothesis: null
+failure:
+  semantics: pre_admission_retryable_failure
+  sampling: independent_per_potential_attempt
+  namespace: pre_admission_failure
+  key: [main_seed, logical_request_id, attempt_no]
+  notification_delay_us: 1000
+  capacity_cost: no_server_admission_or_service_work
+  onset: arrivals_begin
+  end: run_end
+  probabilities_basis_points: [0, 100, 500, 1000, 2000]
+service_demand:
+  identity: request_stable
+  noise: none
+  sensitivity_identity: independent_attempts
+retry:
+  max_attempts_including_initial: 3
+  potential_attempt_bank: 3
+  budget_denial: terminal_budget_denied_at_decision_time
+  max_attempts: terminal_attempts_exhausted_at_failure_notification
+  refill_basis_points: [500, 1000, 2500]
+  initial_retry_tokens: 10
+  base_us: 25000
+  cap_us: 200000
+  timeout_us: 500000
+  deadline_us: 2000000
+discovery:
+  seeds: [910001, 910002, 910003, 910004, 910005, 910006, 910007, 910008]
+  rho_basis_points: [5000, 6500, 8000]
+  trigger_durations_us: [0, 10000000, 30000000]
+  trigger_capacity_multiplier_basis_points: 5000
+  policies: [no_retry, immediate, exponential, full_jitter, retry_budget]
+  timeout_sensitivity_us: [250000, 1000000]
+  sensitivity_rho_basis_points: 6500
+  sensitivity_failure_basis_points: 1000
+  sensitivity_seed_count: 3
+  sensitivity_demand_identity: independent_attempts
+confirmation:
+  seeds: [920001, 920002, 920003, 920004, 920005, 920006, 920007, 920008, 920009, 920010,
+          920011, 920012, 920013, 920014, 920015, 920016, 920017, 920018, 920019, 920020,
+          920021, 920022, 920023, 920024, 920025, 920026, 920027, 920028, 920029, 920030]
+  status: not_run_or_enabled_until_question_and_cells_are_frozen
+baseline:
+  window_count: 4
+  minimum_arrivals_per_window: 100
+  maximum_goodput_cv_basis_points: 1000
+  maximum_absolute_queue_slope_milli_slots_per_second: 50
+  success_floor: null
+  eligibility: stable_queues_and_goodput_not_absolute_success_ratio
+  mature_cohort: arrival_before_baseline_end_minus_logical_deadline
+analysis:
+  summary_unit: seed
+  comparison: paired_same_seed_and_same_failure_trace
+  intervals: paired_seed_percentile_bootstrap_95
+  bootstrap_replicates: 2000
+  bootstrap_seed: 424242
+  recovery_horizon_us: 600000000
+  outcome_denominator: mature_arrival_cohort
+  trailing_deadline_cohort: exclude_entire_cohort_including_fast_successes
+  recovery_scope: policy_specific_baseline_report_absolute_success_also
+  dominance: descriptive_mean_success_latency_and_consumed_work_no_universal_winner
+parameter_provenance:
+  all_factor_levels: synthetic_model_assumptions_not_empirical_calibration
+  timeout_sensitivity: synthetic_fixed_values_not_calibrated_percentiles
+  demand_identity: structural_model_assumption
+  v1_primary_analysis: unchanged_not_reinterpreted

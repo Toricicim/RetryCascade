@@ -7,3 +7,8 @@ nvim.log
 docs/
 output/
 tmp/
+.ruff_cache/
+.DS_Store
+.env
+.env.*
+run_summary.json

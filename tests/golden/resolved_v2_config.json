@@ -1,0 +1,137 @@
+{
+  "rng": {
+    "namespaces": {
+      "arrival": "external_arrival",
+      "service": "service_demand",
+      "jitter": "retry_jitter"
+    },
+    "arrival_key": [
+      "main_seed",
+      "logical_arrival_index"
+    ],
+    "service_key": [
+      "main_seed",
+      "logical_request_id",
+      "attempt_no",
+      "stage"
+    ],
+    "jitter_key": [
+      "main_seed",
+      "logical_request_id",
+      "attempt_no"
+    ],
+    "policy_must_not_change_arrival_trace": true,
+    "policy_must_not_change_shared_service_samples": true
+  },
+  "schema_version": "2.0.0",
+  "analysis_eligible": false,
+  "protocol_version": "retrycascade-protocol-v2.0.0",
+  "model_version": "retrycascade-des-v2.0.0",
+  "rng_version": "keyed-chacha20-v2",
+  "seed": 910001,
+  "rho_basis_points": 5000,
+  "arrival_process": {
+    "distribution": "poisson",
+    "rate_definition": "rho_times_nominal_sink_rate"
+  },
+  "service_demand": {
+    "distribution": "lognormal",
+    "parameterization": "mean_and_coefficient_of_variation",
+    "mean_work_units_milli": 1000,
+    "coefficient_of_variation_milli": 500
+  },
+  "request_semantics": {
+    "workload_kind": "read_like_idempotent",
+    "cancellation_after_timeout": false,
+    "cancellation_after_other_attempt_success": false,
+    "late_timed_out_completion_produces_goodput": false,
+    "unique_goodput_per_logical_request": true
+  },
+  "policy": {
+    "kind": "full_jitter",
+    "base_us": 25000,
+    "cap_us": 200000,
+    "rng_namespace": "retry_jitter"
+  },
+  "trigger_enabled": false,
+  "trigger_duration_us": 0,
+  "stages": [
+    {
+      "name": "source",
+      "workers": 1,
+      "queue_capacity_waiting": 100,
+      "nominal_rate_work_units_per_second": 140
+    },
+    {
+      "name": "transform",
+      "workers": 1,
+      "queue_capacity_waiting": 100,
+      "nominal_rate_work_units_per_second": 120
+    },
+    {
+      "name": "sink",
+      "workers": 1,
+      "queue_capacity_waiting": 100,
+      "nominal_rate_work_units_per_second": 100
+    }
+  ],
+  "retry_contract": {
+    "per_attempt_timeout_us": 500000,
+    "timeout_origin": "source_admission",
+    "timeout_includes_all_queue_waiting": true,
+    "overall_logical_deadline_us": 2000000,
+    "max_attempts_including_initial": 3,
+    "retryable_causes": [
+      "attempt_timeout",
+      "queue_rejected",
+      "pre_admission_failure"
+    ],
+    "maximum_one_retry_schedule_per_attempt_cause": true,
+    "stop_creating_retries_after_logical_success": true,
+    "stop_creating_retries_after_overall_deadline": true
+  },
+  "trigger_start_us": 300000000,
+  "trigger_end_us": 300000000,
+  "trigger_capacity_multiplier_basis_points": 5000,
+  "post_trigger_duration_us": 900000000,
+  "run_end_us": 1200000000,
+  "observation": {
+    "arrivals_begin_us": 0,
+    "warmup_end_us": 180000000,
+    "baseline_start_us": 180000000,
+    "baseline_end_us": 300000000
+  },
+  "baseline": {
+    "window_us": 30000000,
+    "g0_statistic": "median_window_logical_goodput",
+    "q0_statistic": "p95_of_window_mean_total_queue_occupancy"
+  },
+  "recovery": {
+    "window_us": 30000000,
+    "consecutive_non_overlapping_windows": 3,
+    "goodput_fraction_of_g0_basis_points": 9500,
+    "queue_margin_fraction_of_total_waiting_capacity_basis_points": 500,
+    "sensitivity": {
+      "goodput_fractions_basis_points": [
+        9000,
+        9500,
+        9900
+      ],
+      "queue_margin_fractions_basis_points": [
+        200,
+        500,
+        1000
+      ]
+    },
+    "non_recovery_label": "operational_non_recovery_within_horizon"
+  },
+  "maximum_events": 20000000,
+  "protocol_sha256": "2c6df9f4723e0f48fe3a70a086aa88dd04f0730ff015fc7349506dd3bdadfa4b",
+  "run_config_sha256": "3cd078a5d77afde746828248561250db341cb3505664f30b65e3fde9a95c4e19",
+  "extensions": {
+    "pre_admission_failure_basis_points": 1000,
+    "failure_notification_delay_us": 1000,
+    "demand_identity": "request_stable",
+    "budget_denial_finishes_logical_request": true
+  }
+}

@@ -19,7 +19,7 @@ fn resolved_smoke_config_produces_a_versioned_summary() {
     let summary: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(
         summary["summary_schema_version"],
-        "retrycascade-run-summary-v1.0.0"
+        "retrycascade-run-summary-v1.1.0"
     );
     assert_eq!(summary["lifecycle_ledger_closed"], true);
     assert_eq!(summary["summary_sha256"].as_str().unwrap().len(), 64);

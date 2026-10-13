@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -198,6 +198,7 @@ pub enum StageCompletionHandling {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ActiveService {
+    initial_work_scaled: u128,
     remaining_work_scaled: u128,
     last_updated_at: Tick,
     rate_scaled_per_us: u128,
@@ -219,6 +220,8 @@ pub struct Pipeline {
     active_services: [HashMap<AttemptId, ActiveService>; STAGE_COUNT],
     known_service_epochs: [HashMap<AttemptId, u64>; STAGE_COUNT],
     queue_area_last_updated_at: [Tick; STAGE_COUNT],
+    busy_time_us: [u128; STAGE_COUNT],
+    completed_work_milli: [BTreeMap<AttemptId, u128>; STAGE_COUNT],
     summary: PipelineSummary,
 }
 
@@ -278,6 +281,8 @@ impl Pipeline {
             active_services: std::array::from_fn(|_| HashMap::new()),
             known_service_epochs: std::array::from_fn(|_| HashMap::new()),
             queue_area_last_updated_at: [Tick::ZERO; STAGE_COUNT],
+            busy_time_us: [0; STAGE_COUNT],
+            completed_work_milli: std::array::from_fn(|_| BTreeMap::new()),
             summary: PipelineSummary::default(),
         })
     }
@@ -397,6 +402,10 @@ impl Pipeline {
         }
 
         self.active_services[stage_index].remove(&attempt_id);
+        self.completed_work_milli[stage_index].insert(
+            attempt_id,
+            active.initial_work_scaled / SCALED_WORK_PER_MILLI_WORK_UNIT,
+        );
         let outcome = self.stages[stage_index].complete(attempt_id)?;
         let promoted_completion_event = outcome
             .started_next
@@ -501,6 +510,47 @@ impl Pipeline {
         Ok(summary)
     }
 
+    /// Realized work, including partial in-flight work at the horizon. A
+    /// trigger changes speed, not demand. Partial milli-work is rounded down.
+    pub fn work_at(&self, now: Tick) -> Result<BTreeMap<AttemptId, [u128; 3]>, PipelineError> {
+        let mut result = BTreeMap::new();
+        for stage in 0..STAGE_COUNT {
+            for (id, work) in &self.completed_work_milli[stage] {
+                result.entry(*id).or_insert([0; 3])[stage] = *work;
+            }
+            for (id, active) in &self.active_services[stage] {
+                let elapsed = now
+                    .as_u64()
+                    .checked_sub(active.last_updated_at.as_u64())
+                    .ok_or(PipelineError::ServiceProgressError)?;
+                let processed = active
+                    .rate_scaled_per_us
+                    .checked_mul(u128::from(elapsed))
+                    .ok_or(PipelineError::ServiceProgressError)?
+                    .min(active.remaining_work_scaled);
+                let work = active.initial_work_scaled - active.remaining_work_scaled + processed;
+                result.entry(*id).or_insert([0; 3])[stage] = work / SCALED_WORK_PER_MILLI_WORK_UNIT;
+            }
+        }
+        Ok(result)
+    }
+
+    pub fn busy_time_at(&self, now: Tick) -> Result<[u128; 3], PipelineError> {
+        let mut result = self.busy_time_us;
+        for (stage, value) in result.iter_mut().enumerate() {
+            let elapsed = now
+                .as_u64()
+                .checked_sub(self.queue_area_last_updated_at[stage].as_u64())
+                .ok_or(PipelineError::ServiceProgressError)?;
+            *value = value
+                .checked_add(
+                    u128::from(self.summary.stages[stage].in_service) * u128::from(elapsed),
+                )
+                .ok_or(PipelineError::ServiceProgressError)?;
+        }
+        Ok(result)
+    }
+
     fn admit_stage(
         &mut self,
         stage_index: usize,
@@ -565,6 +615,7 @@ impl Pipeline {
         self.active_services[stage_index].insert(
             job.attempt_id,
             ActiveService {
+                initial_work_scaled: remaining_work_scaled,
                 remaining_work_scaled,
                 last_updated_at: now,
                 rate_scaled_per_us,
@@ -637,6 +688,7 @@ impl Pipeline {
             self.active_services[stage_index].insert(
                 attempt_id,
                 ActiveService {
+                    initial_work_scaled: active.initial_work_scaled,
                     remaining_work_scaled,
                     last_updated_at: now,
                     rate_scaled_per_us: new_rate_scaled_per_us,
@@ -704,6 +756,10 @@ impl Pipeline {
             .waiting
             .checked_mul(elapsed_us)
             .ok_or(PipelineError::QueueAreaOverflow)?;
+
+        self.busy_time_us[stage_index] = self.busy_time_us[stage_index]
+            .checked_add(u128::from(metrics.in_service) * u128::from(elapsed_us))
+            .ok_or(PipelineError::ServiceProgressError)?;
 
         metrics.waiting_area_slot_us = metrics
             .waiting_area_slot_us

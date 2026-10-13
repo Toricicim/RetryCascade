@@ -73,6 +73,22 @@ impl KeyedRng {
         )
     }
 
+    pub fn failure_u64(self, logical_request_id: LogicalRequestId, attempt_no: u64) -> u64 {
+        self.sample(
+            "pre_admission_failure",
+            &[
+                KeyPart::Unsigned(logical_request_id.0),
+                KeyPart::Unsigned(attempt_no),
+            ],
+        )
+    }
+
+    pub fn pre_admission_fails(self, id: LogicalRequestId, attempt_no: u64, bp: u64) -> bool {
+        // Exact integer threshold; no modulo bias in the Bernoulli draw.
+        u128::from(self.failure_u64(id, attempt_no)) * 10_000
+            < u128::from(bp) * (u128::from(u64::MAX) + 1)
+    }
+
     fn sample(self, namespace: &str, parts: &[KeyPart]) -> u64 {
         let mut hasher = Sha256::new();
         encode_text(&mut hasher, RNG_VERSION);

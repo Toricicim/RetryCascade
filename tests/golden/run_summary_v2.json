@@ -1,0 +1,590 @@
+{
+  "summary_schema_version": "retrycascade-run-summary-v2.0.0",
+  "provenance": {
+    "schema_version": "2.0.0",
+    "analysis_eligible": false,
+    "protocol_version": "retrycascade-protocol-v2.0.0",
+    "model_version": "retrycascade-des-v2.0.0",
+    "rng_version": "keyed-chacha20-v2",
+    "protocol_sha256": "2c6df9f4723e0f48fe3a70a086aa88dd04f0730ff015fc7349506dd3bdadfa4b",
+    "run_config_sha256": "3cd078a5d77afde746828248561250db341cb3505664f30b65e3fde9a95c4e19",
+    "seed": 910001
+  },
+  "policy": "full_jitter",
+  "run_end_us": 1200000000,
+  "trigger_end_us": 300000000,
+  "counts": {
+    "logical_arrivals": 59842,
+    "unique_goodput": 59775,
+    "logical_deadline_abandoned": 0,
+    "logical_attempts_exhausted": 65,
+    "logical_outstanding_at_horizon": 2,
+    "physical_attempts": 66469,
+    "attempt_timeouts": 0,
+    "late_completions": 0,
+    "duplicate_completions": 0,
+    "queue_rejections": 0,
+    "pre_admission_failures": 6692,
+    "attempt_outstanding_at_horizon": 2,
+    "retries_scheduled": 6627,
+    "retries_denied_by_budget": 0,
+    "budget_refill_events": 0,
+    "retry_ready_noops": 0,
+    "duplicate_retry_schedules_suppressed": 0,
+    "events_processed": 371980
+  },
+  "retry_amplification": {
+    "window_start_us": 0,
+    "window_end_us": 1200000000,
+    "numerator_physical_attempts": 66469,
+    "denominator_logical_arrivals": 59842,
+    "ratio_milli": 1110
+  },
+  "budget_final_units": null,
+  "budget_capacity_units": null,
+  "arrival_trace_sha256": "89cc16624e061366818ccf950ebb25feac940c766f12b25f256e35bebf1e614b",
+  "potential_service_trace_sha256": "fc677eacefdde9ec77cf474eaeb363fef9cc5c0bf9ad0c65314302b8d0a7303a",
+  "lifecycle_ledger_closed": true,
+  "stages": [
+    {
+      "name": "source",
+      "admissions": 59777,
+      "completions": 59777,
+      "queue_rejections": 0,
+      "max_in_service": 1,
+      "max_waiting": 8,
+      "mean_waiting_milli_slots_full_run": 120
+    },
+    {
+      "name": "transform",
+      "admissions": 59777,
+      "completions": 59776,
+      "queue_rejections": 0,
+      "max_in_service": 1,
+      "max_waiting": 7,
+      "mean_waiting_milli_slots_full_run": 128
+    },
+    {
+      "name": "sink",
+      "admissions": 59776,
+      "completions": 59775,
+      "queue_rejections": 0,
+      "max_in_service": 1,
+      "max_waiting": 9,
+      "mean_waiting_milli_slots_full_run": 209
+    }
+  ],
+  "recovery": {
+    "baseline_reference_available": true,
+    "baseline_total_unique_goodput": 5861,
+    "baseline_window_count": 4,
+    "baseline_g0_milli_per_second": 48550,
+    "baseline_q0_milli_slots": 439,
+    "recovery_at_us": 390000000,
+    "operational_non_recovery_within_horizon": false,
+    "windows": [
+      {
+        "start_us": 300000000,
+        "end_us": 330000000,
+        "unique_goodput": 1532,
+        "goodput_milli_per_second": 51066,
+        "mean_waiting_milli_slots": 516,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 330000000,
+        "end_us": 360000000,
+        "unique_goodput": 1492,
+        "goodput_milli_per_second": 49733,
+        "mean_waiting_milli_slots": 444,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 360000000,
+        "end_us": 390000000,
+        "unique_goodput": 1529,
+        "goodput_milli_per_second": 50966,
+        "mean_waiting_milli_slots": 466,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 390000000,
+        "end_us": 420000000,
+        "unique_goodput": 1493,
+        "goodput_milli_per_second": 49766,
+        "mean_waiting_milli_slots": 448,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 420000000,
+        "end_us": 450000000,
+        "unique_goodput": 1431,
+        "goodput_milli_per_second": 47700,
+        "mean_waiting_milli_slots": 437,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 450000000,
+        "end_us": 480000000,
+        "unique_goodput": 1481,
+        "goodput_milli_per_second": 49366,
+        "mean_waiting_milli_slots": 462,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 480000000,
+        "end_us": 510000000,
+        "unique_goodput": 1452,
+        "goodput_milli_per_second": 48400,
+        "mean_waiting_milli_slots": 483,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 510000000,
+        "end_us": 540000000,
+        "unique_goodput": 1541,
+        "goodput_milli_per_second": 51366,
+        "mean_waiting_milli_slots": 465,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 540000000,
+        "end_us": 570000000,
+        "unique_goodput": 1495,
+        "goodput_milli_per_second": 49833,
+        "mean_waiting_milli_slots": 413,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 570000000,
+        "end_us": 600000000,
+        "unique_goodput": 1556,
+        "goodput_milli_per_second": 51866,
+        "mean_waiting_milli_slots": 472,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 600000000,
+        "end_us": 630000000,
+        "unique_goodput": 1501,
+        "goodput_milli_per_second": 50033,
+        "mean_waiting_milli_slots": 412,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 630000000,
+        "end_us": 660000000,
+        "unique_goodput": 1552,
+        "goodput_milli_per_second": 51733,
+        "mean_waiting_milli_slots": 461,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 660000000,
+        "end_us": 690000000,
+        "unique_goodput": 1502,
+        "goodput_milli_per_second": 50066,
+        "mean_waiting_milli_slots": 482,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 690000000,
+        "end_us": 720000000,
+        "unique_goodput": 1455,
+        "goodput_milli_per_second": 48500,
+        "mean_waiting_milli_slots": 412,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 720000000,
+        "end_us": 750000000,
+        "unique_goodput": 1478,
+        "goodput_milli_per_second": 49266,
+        "mean_waiting_milli_slots": 469,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 750000000,
+        "end_us": 780000000,
+        "unique_goodput": 1489,
+        "goodput_milli_per_second": 49633,
+        "mean_waiting_milli_slots": 476,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 780000000,
+        "end_us": 810000000,
+        "unique_goodput": 1513,
+        "goodput_milli_per_second": 50433,
+        "mean_waiting_milli_slots": 490,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 810000000,
+        "end_us": 840000000,
+        "unique_goodput": 1510,
+        "goodput_milli_per_second": 50333,
+        "mean_waiting_milli_slots": 509,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 840000000,
+        "end_us": 870000000,
+        "unique_goodput": 1534,
+        "goodput_milli_per_second": 51133,
+        "mean_waiting_milli_slots": 445,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 870000000,
+        "end_us": 900000000,
+        "unique_goodput": 1487,
+        "goodput_milli_per_second": 49566,
+        "mean_waiting_milli_slots": 492,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 900000000,
+        "end_us": 930000000,
+        "unique_goodput": 1478,
+        "goodput_milli_per_second": 49266,
+        "mean_waiting_milli_slots": 408,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 930000000,
+        "end_us": 960000000,
+        "unique_goodput": 1424,
+        "goodput_milli_per_second": 47466,
+        "mean_waiting_milli_slots": 407,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 960000000,
+        "end_us": 990000000,
+        "unique_goodput": 1508,
+        "goodput_milli_per_second": 50266,
+        "mean_waiting_milli_slots": 529,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 990000000,
+        "end_us": 1020000000,
+        "unique_goodput": 1520,
+        "goodput_milli_per_second": 50666,
+        "mean_waiting_milli_slots": 493,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1020000000,
+        "end_us": 1050000000,
+        "unique_goodput": 1524,
+        "goodput_milli_per_second": 50800,
+        "mean_waiting_milli_slots": 571,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1050000000,
+        "end_us": 1080000000,
+        "unique_goodput": 1542,
+        "goodput_milli_per_second": 51400,
+        "mean_waiting_milli_slots": 452,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1080000000,
+        "end_us": 1110000000,
+        "unique_goodput": 1491,
+        "goodput_milli_per_second": 49700,
+        "mean_waiting_milli_slots": 393,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1110000000,
+        "end_us": 1140000000,
+        "unique_goodput": 1462,
+        "goodput_milli_per_second": 48733,
+        "mean_waiting_milli_slots": 434,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1140000000,
+        "end_us": 1170000000,
+        "unique_goodput": 1478,
+        "goodput_milli_per_second": 49266,
+        "mean_waiting_milli_slots": 396,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      },
+      {
+        "start_us": 1170000000,
+        "end_us": 1200000000,
+        "unique_goodput": 1511,
+        "goodput_milli_per_second": 50366,
+        "mean_waiting_milli_slots": 536,
+        "goodput_pass": true,
+        "queue_pass": true,
+        "recovered_window": true
+      }
+    ],
+    "sensitivity_horizons": [
+      {
+        "horizon_us": 300000000,
+        "fully_observed": true,
+        "recovered_by_horizon": true
+      },
+      {
+        "horizon_us": 600000000,
+        "fully_observed": true,
+        "recovered_by_horizon": true
+      },
+      {
+        "horizon_us": 900000000,
+        "fully_observed": true,
+        "recovered_by_horizon": true
+      }
+    ]
+  },
+  "diagnostics": {
+    "baseline_cohort": {
+      "name": "baseline",
+      "start_us": 180000000,
+      "end_us": 300000000,
+      "logical_arrivals": 5860,
+      "unique_on_time_successes": 5855,
+      "deadline_abandoned": 0,
+      "attempts_exhausted": 5,
+      "outstanding_at_horizon": 0,
+      "successes_by_interval_end": 5854
+    },
+    "arrival_cohorts": [
+      {
+        "name": "pre_trigger",
+        "start_us": 0,
+        "end_us": 300000000,
+        "logical_arrivals": 14833,
+        "unique_on_time_successes": 14815,
+        "deadline_abandoned": 0,
+        "attempts_exhausted": 18,
+        "outstanding_at_horizon": 0,
+        "successes_by_interval_end": 14814
+      },
+      {
+        "name": "during_trigger",
+        "start_us": 300000000,
+        "end_us": 300000000,
+        "logical_arrivals": 0,
+        "unique_on_time_successes": 0,
+        "deadline_abandoned": 0,
+        "attempts_exhausted": 0,
+        "outstanding_at_horizon": 0,
+        "successes_by_interval_end": 0
+      },
+      {
+        "name": "post_trigger",
+        "start_us": 300000000,
+        "end_us": 1200000000,
+        "logical_arrivals": 45009,
+        "unique_on_time_successes": 44960,
+        "deadline_abandoned": 0,
+        "attempts_exhausted": 47,
+        "outstanding_at_horizon": 2,
+        "successes_by_interval_end": 44960
+      }
+    ],
+    "baseline_windows": [
+      {
+        "start_us": 180000000,
+        "end_us": 210000000,
+        "logical_arrivals": 1536,
+        "unique_goodput": 1541,
+        "queue_area_slot_us": 13004976
+      },
+      {
+        "start_us": 210000000,
+        "end_us": 240000000,
+        "logical_arrivals": 1411,
+        "unique_goodput": 1407,
+        "queue_area_slot_us": 11401958
+      },
+      {
+        "start_us": 240000000,
+        "end_us": 270000000,
+        "logical_arrivals": 1430,
+        "unique_goodput": 1432,
+        "queue_area_slot_us": 12187878
+      },
+      {
+        "start_us": 270000000,
+        "end_us": 300000000,
+        "logical_arrivals": 1483,
+        "unique_goodput": 1481,
+        "queue_area_slot_us": 13186178
+      }
+    ]
+  },
+  "v2_metrics": {
+    "potential_failure_trace_sha256": "930aaa2fd91b317f5e226f9657f0db30c15673a1deb99079d57cb4519dd7aa22",
+    "stage_consumed_work_milli": [
+      59637424,
+      59775165,
+      59692236
+    ],
+    "stage_busy_worker_us": [
+      426007276,
+      498146308,
+      596922362
+    ],
+    "useful_attempt_work_milli": 179102085,
+    "unsuccessful_terminal_attempt_work_milli": 0,
+    "outstanding_attempt_work_milli": 2740,
+    "outcome_cohorts": [
+      {
+        "name": "all",
+        "arrivals": 59842,
+        "observed_outcomes": 59741,
+        "right_censored": 101,
+        "successes": 59677,
+        "failures": 64,
+        "success_latency": {
+          "count": 59677,
+          "sum_us": 2161824292,
+          "p50_us": 32959,
+          "p95_us": 65336,
+          "p99_us": 86403
+        },
+        "failure_latency": {
+          "count": 64,
+          "sum_us": 2595160,
+          "p50_us": 39591,
+          "p95_us": 66826,
+          "p99_us": 71821
+        }
+      },
+      {
+        "name": "during_trigger",
+        "arrivals": 0,
+        "observed_outcomes": 0,
+        "right_censored": 0,
+        "successes": 0,
+        "failures": 0,
+        "success_latency": {
+          "count": 0,
+          "sum_us": 0,
+          "p50_us": null,
+          "p95_us": null,
+          "p99_us": null
+        },
+        "failure_latency": {
+          "count": 0,
+          "sum_us": 0,
+          "p50_us": null,
+          "p95_us": null,
+          "p99_us": null
+        }
+      },
+      {
+        "name": "post_trigger",
+        "arrivals": 45009,
+        "observed_outcomes": 44908,
+        "right_censored": 101,
+        "successes": 44862,
+        "failures": 46,
+        "success_latency": {
+          "count": 44862,
+          "sum_us": 1627782334,
+          "p50_us": 32885,
+          "p95_us": 65798,
+          "p99_us": 87038
+        },
+        "failure_latency": {
+          "count": 46,
+          "sum_us": 1791480,
+          "p50_us": 38020,
+          "p95_us": 61577,
+          "p99_us": 70000
+        }
+      },
+      {
+        "name": "baseline_mature",
+        "arrivals": 5769,
+        "observed_outcomes": 5769,
+        "right_censored": 0,
+        "successes": 5764,
+        "failures": 5,
+        "success_latency": {
+          "count": 5764,
+          "sum_us": 205366257,
+          "p50_us": 32988,
+          "p95_us": 62404,
+          "p99_us": 82103
+        },
+        "failure_latency": {
+          "count": 5,
+          "sum_us": 236981,
+          "p50_us": 52807,
+          "p95_us": 69755,
+          "p99_us": 69755
+        }
+      }
+    ]
+  },
+  "summary_sha256": "bf1924cf26875282f574ad2010a6e9346f47f6eb93f654700761521636d91ba7"
+}

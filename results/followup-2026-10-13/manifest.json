@@ -1,0 +1,20 @@
+{
+  "snapshot_version": "retrycascade-public-results-v1",
+  "source_plan_sha256": "dde2c92e810f695ba74866749c680a96e2173244d42810a2dff6943a61d26c1b",
+  "source_analysis_manifest_sha256": "6bce1acee96614a49bddd685c0254eee1a1ad8eee478701bc14539d608666f4b",
+  "source_simulator_binary_sha256": "5e164b23f92b077219b8392c22db92c81029f93af5b4559e68aa6029002623ec",
+  "source_protocol_sha256": "2c6df9f4723e0f48fe3a70a086aa88dd04f0730ff015fc7349506dd3bdadfa4b",
+  "followup_protocol_sha256": "a6ad7995378c3b7f5a74077b6099d2cf50f2df5324295d4991cda5e37c520239",
+  "source_base_git_commit": "4a63726bca58afc148085d5c4c315af017a77189",
+  "source_worktree_was_dirty": true,
+  "source_cargo_lock_sha256": "1176348144249f325326573e8eba160e5c574f46f3b4659f7236b467aa2b84c4",
+  "source_python_lock_sha256": "f31c995fa7767972fa8698a04741c60cf4e7454a5b37c487ba7749359641a781",
+  "source_analysis_sha256": "3b4dae95cc5108bedf61c7c9042dd390b84f05df0960e81c00f1c7c7ad2cba21",
+  "files": {
+    "snapshot.json": "63c9521bf9a1a9a684f94d596b422acc9f1452ef5b1f35157ff48177bea151b6",
+    "recovery_curves.png": "100a2b85741c1954f350fbc05d28dad170dd1e53d8c5948995fb787b9994b5a1",
+    "incident_outcomes.png": "efafee1d9d219e8a67e30ebf724f6060e2f9414f773c3aa60e83256ccb6271fc"
+  },
+  "raw_artifacts_included": false,
+  "note": "Pre-release study snapshot. Hashes identify the actual original study, not the later packaging commit. Re-running other platforms may not give bit-identical floating-point results."
+}
